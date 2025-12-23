@@ -586,3 +586,789 @@
     // choices -> restart
     const restartChoice = {
       label: "Начать новый цикл",
+      dp: 0, ds: 0,
+      next: null,
+      _action: () => resetGame()
+    };
+
+    renderChoicesUI([restartChoice], { isEnd: true });
+    renderChoicesOnMap([restartChoice], { isEnd: true });
+    drawShipAndFinish();
+  }
+
+  function fatal(reason){
+    state.stress = 100;
+    updateBars();
+    renderEnd(false, reason);
+  }
+
+  function maybeInsertRandom(nextId){
+    if (state.pendingReturn) return nextId;
+
+    state.stepsSinceRandom++;
+    if (state.stepsSinceRandom < 2) return nextId;
+
+    state.stepsSinceRandom = 0;
+    state.pendingReturn = nextId;
+
+    const pool = Object.keys(randomEvents);
+    if (state.flags.asteroid_possible && chance(0.45)) return "R1";
+
+    if (state.flags.fuzzy_requirements && chance(0.35)) {
+      return chance(0.5) ? "R2" : "R4";
+    }
+
+    return pool[rnd(0, pool.length - 1)];
+  }
+
+  function resolveNext(next){
+    if (typeof next === "function") return next(state);
+    return next;
+  }
+
+  function goTo(nextId){
+    if (!nextId) return;
+    if (endIfNeeded()) return;
+
+    if (nextId === "E11") {
+      state.currentNode = "E11";
+      state.visited.add("E11");
+      renderNode(nodes["E11"]);
+      updateBars();
+      return;
+    }
+
+    const injected = maybeInsertRandom(nextId);
+    state.currentNode = injected;
+    state.visited.add(injected);
+
+    if (nodes[injected]) renderNode(nodes[injected]);
+    else renderNode(randomEvents[injected]);
+
+    updateBars();
+  }
+
+  function choose(option){
+    if (option._action) { option._action(); return; }
+
+    if (option.fatal) {
+      fatal(option.fatalReason || "Фатальная ошибка на маршруте.\nСовет закрывает миссию.");
+      return;
+    }
+
+    if (option.setFlag) {
+      for (const [k,v] of Object.entries(option.setFlag)) state.flags[k] = v;
+    }
+
+    if (option.prob) {
+      if (chance(option.prob.p)) {
+        applyDelta(option.prob.success.dp, option.prob.success.ds);
+        if (option.prob.success.setFlag) for (const [k,v] of Object.entries(option.prob.success.setFlag)) state.flags[k] = v;
+        if (option.prob.success.fatal) { fatal(option.prob.success.fatalReason); return; }
+        goTo(resolveNext(option.prob.success.next));
+        return;
+      } else {
+        if (option.prob.fail.fatal) { fatal(option.prob.fail.fatalReason); return; }
+        applyDelta(option.prob.fail.dp, option.prob.fail.ds);
+        if (option.prob.fail.setFlag) for (const [k,v] of Object.entries(option.prob.fail.setFlag)) state.flags[k] = v;
+        goTo(resolveNext(option.prob.fail.next));
+        return;
+      }
+    }
+
+    applyDelta(option.dp, option.ds);
+
+    if (option.addStressLater) {
+      state.flags.audit_risk = true;
+    }
+
+    goTo(resolveNext(option.next));
+  }
+
+  // ---------------------------
+  // Map geometry
+  // ---------------------------
+  const NODE_POS = {
+    // Key nodes (spread like FTL)
+    E1:  {x:110, y:320},
+    E2:  {x:210, y:210},
+    E3:  {x:300, y:380},
+    E4:  {x:410, y:290},
+    E5A: {x:510, y:210},
+    E6A: {x:560, y:360},
+    E5B: {x:520, y:410},
+    E6B: {x:610, y:260},
+    E7:  {x:680, y:320},
+    E8:  {x:760, y:220},
+    E9:  {x:820, y:360},
+    E10: {x:880, y:290},
+    E11: {x:930, y:260},
+
+    // Random-ish positions (cluster around mid/right)
+    R1:  {x:470, y:170},
+    R2:  {x:620, y:420},
+    R3:  {x:735, y:300},
+    R4:  {x:645, y:180},
+    R5:  {x:780, y:420},
+    R6:  {x:560, y:140},
+    R7:  {x:865, y:210},
+    R8:  {x:845, y:430},
+
+    WIN:  {x:965, y:250},
+    LOSE: {x:965, y:330}
+  };
+
+  const ROUTE_POINTS = [
+    {x: 70,  y:310},
+    {x: 200, y:240},
+    {x: 300, y:380},
+    {x: 420, y:310},
+    {x: 650, y:240},
+    {x: 760, y:300},
+    {x: 900, y:330},
+    {x: 960, y:280}
+  ];
+
+  function lerp(a,b,t){ return a+(b-a)*t; }
+
+  function pointOnPolyline(points, t){
+    // t in [0,1], constant-speed-ish over segments
+    const segs = [];
+    let total = 0;
+    for (let i=0;i<points.length-1;i++){
+      const dx = points[i+1].x - points[i].x;
+      const dy = points[i+1].y - points[i].y;
+      const len = Math.hypot(dx,dy);
+      segs.push({i, len});
+      total += len;
+    }
+    let dist = t * total;
+    for (const s of segs){
+      if (dist <= s.len){
+        const p0 = points[s.i];
+        const p1 = points[s.i+1];
+        const lt = s.len === 0 ? 0 : dist / s.len;
+        return { x: lerp(p0.x, p1.x, lt), y: lerp(p0.y, p1.y, lt) };
+      }
+      dist -= s.len;
+    }
+    return points[points.length-1];
+  }
+
+  // SVG helpers
+  const SVG_NS = "http://www.w3.org/2000/svg";
+  function el(name, attrs = {}, text = null){
+    const n = document.createElementNS(SVG_NS, name);
+    for (const [k,v] of Object.entries(attrs)) n.setAttribute(k, String(v));
+    if (text != null) n.textContent = text;
+    return n;
+  }
+
+  function clear(node){ while(node.firstChild) node.removeChild(node.firstChild); }
+
+  function beaconDiamond(x,y, color, size=10, glow="glowA"){
+    const g = el("g", { transform:`translate(${x} ${y})`, filter:`url(#${glow})` });
+    const p = el("path", {
+      d: `M 0 ${-size} L ${size} 0 L 0 ${size} L ${-size} 0 Z`,
+      fill: color,
+      stroke: "rgba(0,0,0,.35)",
+      "stroke-width":"1"
+    });
+    g.appendChild(p);
+    return g;
+  }
+
+  function drawStaticNodes(){
+    clear(ui.staticNodes);
+
+    // faint lines between main route nodes (E1..E11)
+    const main = ["E1","E2","E3","E4","E7","E8","E9","E10","E11"];
+    for (let i=0;i<main.length-1;i++){
+      const a = NODE_POS[main[i]];
+      const b = NODE_POS[main[i+1]];
+      if (!a || !b) continue;
+      ui.staticNodes.appendChild(el("line",{
+        x1:a.x, y1:a.y, x2:b.x, y2:b.y,
+        stroke:"rgba(219,231,255,.14)",
+        "stroke-width":"2",
+        "stroke-linecap":"round",
+        opacity:"0.65"
+      }));
+    }
+
+    // all nodes as subtle circles
+    const allKeys = Object.keys(NODE_POS).filter(k => k.startsWith("E"));
+    for (const id of allKeys){
+      const p = NODE_POS[id];
+      const visited = state.visited.has(id);
+      const isCurrent = (state.currentNode === id);
+      ui.staticNodes.appendChild(el("circle",{
+        cx:p.x, cy:p.y,
+        r: visited ? 6.2 : 5.2,
+        fill: visited ? "rgba(219,231,255,.38)" : "rgba(219,231,255,.22)",
+        stroke: isCurrent ? "rgba(76,201,240,.85)" : "rgba(0,0,0,.25)",
+        "stroke-width": isCurrent ? "2" : "1",
+        filter: isCurrent ? "url(#glowA)" : "none",
+        opacity: visited ? "0.95" : "0.85"
+      }));
+
+      // small label
+      ui.staticNodes.appendChild(el("text",{
+        x: p.x + 10, y: p.y + 4,
+        fill:"rgba(219,231,255,.60)",
+        "font-size":"10",
+        "font-family":"ui-monospace, Menlo, Consolas, monospace"
+      }, id));
+    }
+  }
+
+  function drawShipAndFinish(){
+    clear(ui.shipLayer);
+    clear(ui.finishLayer);
+
+    // Finish (rightmost)
+    const finish = {x: 980, y: 280};
+    const fg = el("g", { filter:"url(#glowB)" });
+    fg.appendChild(beaconDiamond(finish.x, finish.y, "rgba(124,255,124,.95)", 14, "glowB"));
+    fg.appendChild(el("text",{
+      x: finish.x - 52, y: finish.y - 18,
+      fill:"rgba(219,231,255,.85)",
+      "font-size":"12",
+      "font-family":"ui-monospace, Menlo, Consolas, monospace"
+    }, "100"));
+    ui.finishLayer.appendChild(fg);
+
+    // Ship marker position based on progress (0..100)
+    const t = clamp(state.progress / 100, 0, 1);
+    const pt = pointOnPolyline(ROUTE_POINTS, t);
+
+    // If we have explicit node position for current, pin to that (feels like "в секторе")
+    const pn = NODE_POS[state.currentNode];
+    const ship = pn ? pn : pt;
+
+    const shipG = el("g", { transform:`translate(${ship.x} ${ship.y})`, filter:"url(#glowB)" });
+
+    shipG.appendChild(el("circle",{
+      cx:0, cy:0, r:10,
+      fill:"rgba(76,201,240,.22)",
+      stroke:"rgba(76,201,240,.60)",
+      "stroke-width":"2"
+    }));
+
+    // little arrow-like triangle
+    shipG.appendChild(el("path",{
+      d:"M -2 -7 L 10 0 L -2 7 Z",
+      fill:"rgba(76,201,240,.95)",
+      stroke:"rgba(0,0,0,.35)",
+      "stroke-width":"1"
+    }));
+
+    // progress label
+    shipG.appendChild(el("text",{
+      x: 14, y: -10,
+      fill:"rgba(219,231,255,.85)",
+      "font-size":"12",
+      "font-family":"ui-monospace, Menlo, Consolas, monospace"
+    }, `${state.progress}%`));
+
+    ui.shipLayer.appendChild(shipG);
+  }
+
+  function renderChoicesUI(choices, { isEnd=false } = {}){
+    // Both lists: left (under map) + right (main)
+    ui.choices.innerHTML = "";
+    ui.choicesRight.innerHTML = "";
+
+    const targets = [ui.choices, ui.choicesRight];
+    for (const box of targets){
+      for (const c of choices){
+        const btn = document.createElement("button");
+        btn.className = "choice";
+        btn.textContent = c.label;
+        btn.addEventListener("click", () => choose(c));
+        if (isEnd) btn.style.borderColor = "rgba(124,255,124,.55)";
+        box.appendChild(btn);
+      }
+    }
+  }
+
+  function renderChoicesOnMap(choices, { isRandom=false, isEnd=false } = {}){
+    clear(ui.choicesLayer);
+
+    // When end: show only restart beacon near left bottom
+    if (isEnd){
+      const p = {x: 160, y: 470};
+      const g = beaconDiamond(p.x, p.y, "rgba(124,255,124,.95)", 13, "glowB");
+      g.classList.add("clickable","noSelect");
+      g.setAttribute("tabindex","0");
+      g.setAttribute("role","button");
+      g.setAttribute("aria-label", choices[0].label);
+      g.addEventListener("click", () => choose(choices[0]));
+      g.addEventListener("keydown", (e)=>{ if(e.key==="Enter") choose(choices[0]); });
+
+      const label = el("text",{ x:p.x+16, y:p.y+5, fill:"rgba(219,231,255,.90)", "font-size":"12", "font-family":"ui-monospace, Menlo, Consolas, monospace" }, "NEW CYCLE");
+      ui.choicesLayer.appendChild(g);
+      ui.choicesLayer.appendChild(label);
+      return;
+    }
+
+    // Place choice beacons near current node (FTL style: next beacons around)
+    const base = NODE_POS[state.currentNode] || pointOnPolyline(ROUTE_POINTS, clamp(state.progress/100,0,1));
+    const ring = [
+      {dx: 120, dy:-80},
+      {dx: 150, dy:  0},
+      {dx: 120, dy: 85},
+      {dx:  70, dy: 130},
+      {dx:  60, dy:-130},
+    ];
+
+    choices.forEach((c, idx) => {
+      const nextMaybe = resolveNext(c.next);
+      const knownPos = (typeof nextMaybe === "string" && NODE_POS[nextMaybe]) ? NODE_POS[nextMaybe] : null;
+
+      // if we know target sector -> place beacon there; else around current node ring
+      const pos = knownPos ? knownPos : { x: base.x + (ring[idx % ring.length].dx), y: base.y + (ring[idx % ring.length].dy) };
+
+      const color = "rgba(76,201,240,.95)";
+      const g = beaconDiamond(pos.x, pos.y, color, 12, "glowB");
+      g.classList.add("clickable","noSelect");
+      g.setAttribute("tabindex","0");
+      g.setAttribute("role","button");
+      g.setAttribute("aria-label", c.label);
+
+      // tooltip via <title>
+      g.appendChild(el("title", {}, c.label));
+
+      g.addEventListener("click", () => choose(c));
+      g.addEventListener("keydown", (e)=>{ if(e.key==="Enter") choose(c); });
+
+      // small caption
+      const cap = el("text",{
+        x: pos.x + 16, y: pos.y + 4,
+        fill:"rgba(219,231,255,.82)",
+        "font-size":"11",
+        "font-family":"ui-monospace, Menlo, Consolas, monospace"
+      }, knownPos ? (String(nextMaybe)) : "?");
+
+      ui.choicesLayer.appendChild(g);
+      ui.choicesLayer.appendChild(cap);
+    });
+  }
+
+  // ---------------------------
+  // Nodes (Key scenes) — контент сохранён
+  // ---------------------------
+  const nodes = {
+    E1: {
+      id:"E1",
+      sector:"Сектор: Орбита Клиентов",
+      title:"E1. Приём сигнала с планеты Клиентов",
+      text:
+`Капитан получает зашифрованный сигнал.
+Клиенты требуют изменить курс. В эфире — шум: срочность, эмоции и расплывчатые обещания.`,
+      choices:[
+        { label:"Разобрать сигнал, собрать контекст и уточнить детали", dp:10, ds:5, next:"E2" },
+        { label:"Немедленно пообещать выполнение и сроки", dp:15, ds:15, next:"E2" },
+        { label:"Отложить сигнал в архив Галактики", dp:-5, ds:-5, setFlag:{asteroid_possible:true}, next:"E2" }
+      ]
+    },
+
+    E2: {
+      id:"E2",
+      sector:"Сектор: Совет Межзвёздной Связи",
+      title:"E2. Совет Межзвёздной Связи",
+      text:
+`Собрались Главнокомандующий, Основатель Вселенной и офицеры связи.
+Тебя слушают внимательно. У тебя один шанс задать тон миссии.`,
+      choices:[
+        { label:"Защитить ценность миссии цифрами и фактами", dp:15, ds:-5, next:"E3" },
+        { label:"Давить авторитетом клиента без метрик", dp:10, ds:10, next:"E3" },
+        { label:"Публично спорить с Главнокомандующим", fatal:true, fatalReason:"Публичный спор с Главнокомандующим.\nПотеря доверия Совета.\nМиссия закрыта ещё до старта." }
+      ]
+    },
+
+    E3: {
+      id:"E3",
+      sector:"Сектор: Звёздная карта",
+      title:"E3. Построение звёздной карты миссий",
+      text:
+`Перед тобой десятки маршрутов и запросов.
+Каждый — потенциальная экспедиция. Но топлива и экипажей мало.`,
+      choices:[
+        { label:"Жёстко приоритизировать по срочности и ценности", dp:15, ds:-5, next:"E4" },
+        { label:"Взять всё в работу — разберёмся по дороге", dp:10, ds:20, setFlag:{fuzzy_requirements:true}, next:"E4" },
+        { label:"Передать приоритизацию командирам отсеков", dp:10, ds:10, next:"E4" }
+      ]
+    },
+
+    E4: {
+      id:"E4",
+      sector:"Сектор: Выбор звездолёта",
+      title:"E4. Выбор типа звездолёта",
+      text:
+`Нужно определить маршрут:
+тяжёлый крейсер Корпуса Развития — дальний и сложный путь,
+или манёвренный шаттл IT-флота — быстрые локальные прыжки.`,
+      choices:[
+        { label:"Выбрать тяжёлый крейсер Корпуса Развития", dp:20, ds:10, next:"E5A" },
+        { label:"Выбрать манёвренный шаттл IT-флота", dp:15, ds:-5, next:"E5B" },
+        { label:"Запустить оба маршрута параллельно", dp:10, ds:25, setFlag:{fuzzy_requirements:true}, next:"E7" }
+      ]
+    },
+
+    // Branch A (Cruiser)
+    E5A: {
+      id:"E5A",
+      sector:"Сектор: Корпус Развития",
+      title:"E5A. Совет Корпуса Развития",
+      text:
+`Верховный Архитектор и инженеры смотрят на тебя без эмоций.
+Им нужны ясность, риски и гарантия, что корабль не развалится на старте.`,
+      choices:[
+        { label:"Принести подробный план, архитектуру и риски", dp:15, ds:-5, next:"E6A" },
+        { label:"Прийти с идеей без проработки: 'разберёмся по пути'", dp:-10, ds:15, setFlag:{fuzzy_requirements:true}, next:"E6A" },
+        { label:"Публично обвинить инженеров в торможении", fatal:true, fatalReason:"Публичные обвинения инженеров.\nТебя 'отстыковали' от ангара.\nКорабль не собран. Миссия сорвана." }
+      ]
+    },
+
+    E6A: {
+      id:"E6A",
+      sector:"Сектор: Ангар Корпуса Развития",
+      title:"E6A. Ожидание сборки корабля",
+      text:
+`Ангар перегружен. Инженеры заняты спасением всей Галактики.
+Можно ждать, можно давить, можно попытаться обойти очередь.`,
+      choices:[
+        { label:"Терпеливо ждать, улучшая подготовку миссии", dp:10, ds:-5, next:"E7" },
+        { label:"Давить и ускорять сборку любой ценой", dp:15, ds:15, next:"E7" },
+        {
+          label:"Попытаться обойти очередь в ангаре",
+          prob: {
+            p: 0.5,
+            success: { dp:20, ds:0, next:"E7" },
+            fail: { fatal:true, fatalReason:"Попытка обойти очередь провалилась.\nПолитический скандал в ангаре.\nМиссия аннулирована." }
+          }
+        }
+      ]
+    },
+
+    // Branch B (Shuttle)
+    E5B: {
+      id:"E5B",
+      sector:"Сектор: Совет Флота",
+      title:"E5B. Прямой выход на Совет Флота",
+      text:
+`Ты напрямую на Совете Флота.
+Главнокомандующий, Верховный Архитектор и Адмирал Технологий ждут защиты маршрута.`,
+      choices:[
+        { label:"Коротко и по делу: цель, метрика, план, риски", dp:15, ds:-5, next:"E6B" },
+        { label:"Давить сроками: 'нужно вчера'", dp:10, ds:15, next:"E6B" },
+        { label:"Вынести внутренние конфликты на Совет", fatal:true, fatalReason:"Ты принёс внутреннюю войну на Совет Флота.\nКомандование отправляет миссию 'в карантин'.\nЗапуск отменён." }
+      ]
+    },
+
+    E6B: {
+      id:"E6B",
+      sector:"Сектор: Подготовка шаттла",
+      title:"E6B. Быстрый запуск шаттла",
+      text:
+`Шаттл готов к старту, но всё держится на точности формулировок.
+Одно туманное слово — и траектория станет бесконечной.`,
+      choices:[
+        { label:"Чётко ограничить объём и критерии готовности", dp:15, ds:-5, next:"E7" },
+        { label:"Оставить требования размытыми", dp:10, ds:15, setFlag:{fuzzy_requirements:true}, next:"E7" },
+        { label:"Расширить объём 'на всякий случай'", dp:5, ds:20, setFlag:{fuzzy_requirements:true}, next:"E7" }
+      ]
+    },
+
+    // Convergence corridor
+    E7: {
+      id:"E7",
+      sector:"Сектор: Детальный Разбор Траектории",
+      title:"E7. Разбор маршрута полёта",
+      text:
+`Собрались адмиралы, ведущие навигаторы и старшие инженеры.
+Если маршрут описан туманно — миссию вернут на повторную калибровку.`,
+      choices:[
+        { label:"Уточнить и откалибровать маршрут до ясности", dp:15, ds:-5, setFlag:{fuzzy_requirements:false}, next:"E8" },
+        { label:"Оставить туман: 'главное — направление'", dp:-5, ds:15, setFlag:{fuzzy_requirements:true}, next:"E8" },
+        { label:"Сказать: 'разберётесь по ходу'", dp:-10, ds:20, setFlag:{fuzzy_requirements:true}, next:"E8" }
+      ]
+    },
+
+    E8: {
+      id:"E8",
+      sector:"Сектор: Гиперпространство",
+      title:"E8. Расчёт топлива и времени",
+      text:
+`Миссия получает оценку сложности и попадает в очередь запуска.
+Мало топлива — быстрый прыжок. Много топлива — экспедиция на годы.`,
+      choices:[
+        { label:"Честно оценить сложность и предложить этапность", dp:15, ds:-5, next:"E9" },
+        { label:"Занижать оценки, чтобы пробиться в очередь", dp:20, ds:15, addStressLater:true, next:"E9" },
+        { label:"Пролезть вне очереди через давление и связи", fatal:true, fatalReason:"Попытка пролезть вне очереди.\nАдмирал Технологий фиксирует нарушение.\nМиссия закрыта приказом." }
+      ]
+    },
+
+    E9: {
+      id:"E9",
+      sector:"Сектор: Большой Совет Флота",
+      title:"E9. Большой Совет Флота",
+      text:
+`Раз в две недели собирается Большой Совет.
+Идут эпические сражения за каждый слот запуска.`,
+      choices:[
+        { label:"Договориться с союзниками и зафиксировать слот", dp:20, ds:5, next:"E10" },
+        { label:"Пойти в одиночный штурм Совета", dp:15, ds:15, next:"E10" },
+        { label:"Устроить публичный конфликт за слот", dp:0, ds:40, next:"E10" }
+      ]
+    },
+
+    E10: {
+      id:"E10",
+      sector:"Сектор: Окно коррекции траектории",
+      title:"E10. Корректировка траектории",
+      text:
+`После Совета — короткое окно, чтобы менять маршрут.
+Каждая правка может спасти миссию… или сорвать старт.`,
+      choices:[
+        { label:"Внести минимальные правки без срыва старта", dp:10, ds:-5, next:"E11" },
+        { label:"Существенно изменить маршрут (scope creep)", dp:10, ds:20, setFlag:{fuzzy_requirements:true}, next:"E11" },
+        { label:"Отменить изменения вопреки данным", dp:-10, ds:20, next:"E11" }
+      ]
+    },
+
+    E11: {
+      id:"E11",
+      sector:"Сектор: Финальный прыжок",
+      title:"E11. Прыжок к центру Галактики",
+      text:
+`Центр Галактики рядом.
+Системы гудят на пределе. Любая ошибка — и корабль разорвёт на орбите стресса.
+
+Выбери: прыгать сейчас или калибровать ещё один цикл.`,
+      choices: [] // rendered dynamically
+    }
+  };
+
+  // ---------------------------
+  // Random events (FTL-like) — контент сохранён
+  // ---------------------------
+  const randomEvents = {
+    R1: {
+      id:"R1",
+      title:"R1. Астероидный сигнал клиента",
+      text:
+`Экстренный сигнал прорывается в эфир.
+Крупный клиент требует немедленного манёвра — иначе 'ударит по орбите'.`,
+      choices:[
+        { label:"Взять срочно на себя", dp:10, ds:15 },
+        { label:"Делегировать офицерам связи с чёткими рамками", dp:5, ds:0 },
+        { label:"Игнорировать — 'не по плану'", fatal:true, fatalReason:"Ты игнорировал экстренный сигнал.\nКлиент сносит часть миссий с орбиты.\nЗапуск не состоится." }
+      ]
+    },
+
+    R2: {
+      id:"R2",
+      title:"R2. Контрабандисты требований",
+      text:
+`На стыковке появляется 'маленькая просьба': всего одна фича.
+Но у неё тень — ещё десять требований в грузовом отсеке.`,
+      choices:[
+        { label:"Отказать аргументированно и зафиксировать границы", dp:0, ds:-5 },
+        { label:"Согласиться, но ограничить объём письменно", dp:5, ds:10 },
+        { label:"Согласиться без фиксации — 'потом разберёмся'", dp:10, ds:15, setFlag:{fuzzy_requirements:true} }
+      ]
+    },
+
+    R3: {
+      id:"R3",
+      title:"R3. Туманность аналитики",
+      text:
+`Данные противоречат друг другу.
+Каждая метрика показывает другую Вселенную. Решение всё равно нужно сейчас.`,
+      choices:[
+        { label:"Перепроверить источники и синхронизировать трактовку", dp:10, ds:0 },
+        { label:"Выбрать 'удобные' цифры ради решения", dp:10, ds:10, setFlag:{audit_risk:true} },
+        { label:"Отложить решение до идеальных данных", dp:-5, ds:5 }
+      ]
+    },
+
+    R4: {
+      id:"R4",
+      title:"R4. Конфликт командиров отсеков",
+      text:
+`Командиры спорят: чей отсек важнее для прыжка.
+Конфликт разогревает стресс быстрее, чем реактор — топливо.`,
+      choices:[
+        { label:"Созвать мини-совет и развести ответственность", dp:5, ds:5 },
+        { label:"Продавить решением роли", dp:5, ds:15 },
+        { label:"Сделать вид, что проблемы нет", dp:0, ds:10, fatal: chance(0.25), fatalReason:"Ты игнорировал конфликт.\nОтсек навигации саботирует подготовку.\nМиссия разваливается перед стартом." }
+      ]
+    },
+
+    R5: {
+      id:"R5",
+      title:"R5. Потеря ключевого инженера",
+      text:
+`Ключевой инженер уходит на другую миссию: 'спасать Галактику'.
+Нужно либо перестроить план, либо сломать людей.`,
+      choices:[
+        { label:"Перестроить план и сократить объём", dp:5, ds:10 },
+        { label:"Давить сроками и переработками", dp:10, ds:20 },
+        { label:"Заморозить часть миссии ради стабильности", dp:-5, ds:-5 }
+      ]
+    },
+
+    R6: {
+      id:"R6",
+      title:"R6. Неожиданный союзник",
+      text:
+`Офицер из соседнего сектора предлагает помощь: ресурсы и канал к Совету.
+Но за помощь всегда платят политикой.`,
+      choices:[
+        { label:"Принять помощь и зафиксировать договорённости", dp:10, ds:5 },
+        { label:"Отказаться: держать независимость", dp:0, ds:0 },
+        { label:"Перегрузить союзника и требовать больше", dp:10, ds:10 }
+      ]
+    },
+
+    R7: {
+      id:"R7",
+      title:"R7. Поломка навигации",
+      text:
+`Навигационные датчики дают дрейф.
+Можно починить тщательно или поставить быстрый костыль.`,
+      choices:[
+        { label:"Починить тщательно и убрать риск", dp:5, ds:-5 },
+        { label:"Сделать быстрый костыль и лететь дальше", dp:10, ds:10 }
+      ]
+    },
+
+    R8: {
+      id:"R8",
+      title:"R8. Внешний аудит траектории",
+      text:
+`Пришёл запрос на аудит: соответствие маршрута правилам и обещаниям.
+Если ты где-то 'занижал' сложность — это всплывёт.`,
+      choices:[
+        { label:"Подготовиться и честно показать статус", dp:10, ds:5, setFlag:{audit_risk:false} },
+        { label:"Импровизировать и надеяться на удачу", dp:10, ds:15, prob:{ p:0.2, success:{dp:10, ds:0, next:null}, fail:{ fatal:true, fatalReason:"Аудит вскрыл расхождения.\nСовет заморозил миссию до исправлений.\nКорабль не летит." } } },
+        { label:"Скрыть детали и уйти от вопросов", dp:0, ds:20, fatal: (function(){ return chance(0.15); })(), fatalReason:"Попытка скрыть детали аудита.\nДоверие к капитану потеряно.\nМиссия закрыта." }
+      ]
+    }
+  };
+
+  // ---------------------------
+  // Render node
+  // ---------------------------
+  function renderNode(node){
+    if (!node) return;
+
+    const isRandom = node.id && node.id.startsWith("R");
+    if (isRandom) {
+      setTag("warn", "Неожиданное событие");
+    } else {
+      setTag("", node.sector || "Сектор: Неизвестный сектор");
+    }
+
+    ui.sceneTitle.textContent = node.title;
+    ui.sceneText.textContent = node.text;
+
+    // Default choices
+    let choicesToRender = node.choices || [];
+
+    // Handle random events: after choosing, return to pendingReturn unless overridden
+    if (isRandom) {
+      choicesToRender = (node.choices || []).map(c => ({
+        ...c,
+        _action: () => {
+          const pending = state.pendingReturn;
+          state.pendingReturn = null;
+
+          if (c.fatal) { fatal(c.fatalReason || "Катастрофа."); return; }
+          if (c.setFlag) for (const [k,v] of Object.entries(c.setFlag)) state.flags[k] = v;
+          applyDelta(c.dp, c.ds);
+
+          const nextExplicit = resolveNext(c.next);
+          if (nextExplicit) { goTo(nextExplicit); return; }
+
+          goTo(pending || "E11");
+        }
+      }));
+    }
+
+    // E11 dynamic choices (логика сохранена)
+    if (node.id === "E11") {
+      if (state.progress >= 85 && state.stress < 80) setTag("good", "Финал: Прыжок к центру");
+      else if (state.stress >= 80) setTag("bad", "Финал: На пределе");
+      else setTag("warn", "Финал: Рискованный прыжок");
+
+      const c1 = {
+        label:"Синхронизировать системы и выполнить прыжок",
+        _action: () => {
+          applyDelta(10, 10);
+          if (endIfNeeded()) return;
+
+          state.pendingReturn = "E11";
+          state.currentNode = "R7";
+          state.visited.add("R7");
+          renderNode(randomEvents["R7"]);
+          updateBars();
+        }
+      };
+
+      const c2 = {
+        label:"Сделать финальную калибровку перед прыжком",
+        _action: () => {
+          applyDelta(5, -5);
+          if (endIfNeeded()) return;
+
+          state.pendingReturn = "E11";
+          let pick = Object.keys(randomEvents)[rnd(0, Object.keys(randomEvents).length - 1)];
+          if (state.flags.audit_risk && chance(0.5)) pick = "R8";
+
+          state.currentNode = pick;
+          state.visited.add(pick);
+          renderNode(randomEvents[pick]);
+          updateBars();
+        }
+      };
+
+      choicesToRender = [c1, c2];
+    }
+
+    renderChoicesUI(choicesToRender, { isEnd:false });
+    renderChoicesOnMap(choicesToRender, { isRandom, isEnd:false });
+
+    drawStaticNodes();
+    drawShipAndFinish();
+  }
+
+  function resetGame(){
+    state.progress = 0;
+    state.stress = 20;
+    state.cycle += 1;
+    state.flags = { asteroid_possible:false, fuzzy_requirements:false, audit_risk:false };
+    state.stepsSinceRandom = 0;
+    state.pendingReturn = null;
+    state.currentNode = "E1";
+    state.visited = new Set(["E1"]);
+    updateBars();
+    drawStaticNodes();
+    drawShipAndFinish();
+    renderNode(nodes["E1"]);
+  }
+
+  // ---------------------------
+  // Boot
+  // ---------------------------
+  updateBars();
+  drawStaticNodes();
+  drawShipAndFinish();
+  renderNode(nodes[state.currentNode]);
+
+})();
+</script>
+</body>
+</html>
