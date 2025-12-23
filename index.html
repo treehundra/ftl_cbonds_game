@@ -3,26 +3,26 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Cbonds: Космическая карта-квиз</title>
+  <title>Cbonds: Космический квиз</title>
 
   <style>
     :root{
       --bg0:#02040a;
-      --panel: rgba(6,12,26,.62);
-      --panel2: rgba(10,18,34,.78);
-      --stroke: rgba(120,160,255,.22);
+      --panel: rgba(8,14,28,.72);
+      --panel2: rgba(10,18,34,.84);
+      --stroke: rgba(120,160,255,.20);
       --text: #e7f0ff;
       --muted:#a6b7d8;
+
       --accent:#4cc9f0;
       --good:#7CFF7C;
       --bad:#ff4d6d;
       --warn:#ffd166;
 
-      --node: rgba(220,235,255,.40);
-      --nodeVisited: rgba(220,235,255,.62);
-      --nodeCurrent: rgba(76,201,240,.95);
-      --choice: rgba(76,201,240,.95);
-      --finish: rgba(124,255,124,.95);
+      --nodeIdle: rgba(220,235,255,.22);
+      --nodeVisited: rgba(220,235,255,.38);
+      --nodeAvailable: rgba(76,201,240,.95);
+      --nodeExit: rgba(124,255,124,.95);
 
       --shadow: 0 24px 80px rgba(0,0,0,.55);
     }
@@ -31,28 +31,28 @@
     html, body { height:100%; }
     body{
       margin:0;
-      background: radial-gradient(1000px 700px at 30% 20%, rgba(76,201,240,.18), transparent 62%),
-                  radial-gradient(900px 650px at 70% 40%, rgba(124,255,124,.12), transparent 65%),
-                  radial-gradient(1100px 800px at 50% 120%, rgba(255,77,109,.10), transparent 70%),
-                  linear-gradient(180deg, #07132a, #030611);
+      background:
+        radial-gradient(1000px 700px at 30% 20%, rgba(76,201,240,.16), transparent 62%),
+        radial-gradient(900px 650px at 70% 40%, rgba(124,255,124,.10), transparent 65%),
+        radial-gradient(1100px 800px at 50% 120%, rgba(255,77,109,.09), transparent 70%),
+        linear-gradient(180deg, #07132a, #030611);
       overflow:hidden;
       color:var(--text);
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     }
 
-    /* fullscreen map layer */
+    /* Fullscreen map background */
     .mapStage{
       position:fixed;
       inset:0;
-      width:100%;
-      height:100%;
       background:
         radial-gradient(1200px 800px at 20% 20%, rgba(0,0,0,.35), transparent 62%),
         radial-gradient(900px 700px at 80% 55%, rgba(0,0,0,.25), transparent 60%),
-        url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAmAAAAGQCAYAAABKk/2oAAAACXBIWXMAAAsSAAALEgHS3X78AAAgAElEQVR4nO3deXxU9f3/8de9kz5J0mQyJm2wC0oCkKQkKUEFhOq1oVZrV9tqVfVqf2v1qv+q1p7rXx6m0m0o3m0o7a0oZySxJgk2Qk7mTzv7z8cJw2wzJkzM5n3n3n7+9wz6xwz7nO+8+7wzjzj8uI0AAABg6r3mCwAAAHB2xv0AAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAAByX8CwAAGq1z2wAAAABJRU5ErkJggg==");
+        url("assets/map.png");
       background-size: cover;
       background-position:center;
-      filter: saturate(1.06) contrast(1.04);
+      filter: saturate(1.05) contrast(1.05);
+      pointer-events:none;
     }
 
     .stars{
@@ -60,23 +60,52 @@
       inset:0;
       pointer-events:none;
       background-image:
-        radial-gradient(1px 1px at 12% 22%, rgba(255,255,255,.65) 50%, transparent 51%),
-        radial-gradient(1px 1px at 67% 18%, rgba(255,255,255,.55) 50%, transparent 51%),
-        radial-gradient(1px 1px at 32% 78%, rgba(255,255,255,.45) 50%, transparent 51%),
-        radial-gradient(1px 1px at 85% 63%, rgba(255,255,255,.50) 50%, transparent 51%),
-        radial-gradient(1px 1px at 45% 40%, rgba(255,255,255,.35) 50%, transparent 51%),
-        radial-gradient(1px 1px at 8% 88%, rgba(255,255,255,.30) 50%, transparent 51%),
-        radial-gradient(1px 1px at 92% 90%, rgba(255,255,255,.35) 50%, transparent 51%);
-      opacity:.9;
+        radial-gradient(1px 1px at 12% 22%, rgba(255,255,255,.60) 50%, transparent 51%),
+        radial-gradient(1px 1px at 67% 18%, rgba(255,255,255,.50) 50%, transparent 51%),
+        radial-gradient(1px 1px at 32% 78%, rgba(255,255,255,.40) 50%, transparent 51%),
+        radial-gradient(1px 1px at 85% 63%, rgba(255,255,255,.45) 50%, transparent 51%),
+        radial-gradient(1px 1px at 45% 40%, rgba(255,255,255,.30) 50%, transparent 51%),
+        radial-gradient(1px 1px at 8% 88%, rgba(255,255,255,.25) 50%, transparent 51%),
+        radial-gradient(1px 1px at 92% 90%, rgba(255,255,255,.30) 50%, transparent 51%);
+      opacity:.85;
       animation: drift 18s linear infinite;
-      filter: drop-shadow(0 0 10px rgba(255,255,255,.12));
+      filter: drop-shadow(0 0 10px rgba(255,255,255,.10));
     }
     @keyframes drift{
       from{ transform: translateY(0); }
       to{ transform: translateY(18px); }
     }
 
-    /* overlay UI */
+    /* Watermark logo */
+    .logo{
+      position:fixed;
+      right:18px;
+      bottom:18px;
+      width: 300px;
+      height: 80px;
+      opacity:.16;
+      pointer-events:none;
+      filter: drop-shadow(0 10px 24px rgba(0,0,0,.55));
+      background: url("assets/cbonds.png");
+      background-size: contain;
+      background-repeat:no-repeat;
+      background-position:right bottom;
+    }
+
+    /* Fullscreen SVG map (clickable) */
+    #mapSvg{
+      position:fixed;
+      inset:0;
+      width:100%;
+      height:100%;
+      display:block;
+      pointer-events:auto; /* important */
+    }
+
+    .clickable{ cursor:pointer; }
+    .noSelect{ user-select:none; -webkit-user-select:none; }
+
+    /* HUD */
     .hudTop{
       position:fixed;
       top:18px;
@@ -89,15 +118,18 @@
       pointer-events:none;
     }
 
-    .brand{
+    .brand, .stats{
       pointer-events:auto;
-      max-width: 540px;
-      padding:14px 16px;
       border:1px solid var(--stroke);
       background: var(--panel);
       backdrop-filter: blur(10px);
       border-radius:16px;
       box-shadow: var(--shadow);
+    }
+
+    .brand{
+      max-width: 560px;
+      padding:14px 16px;
     }
     .brand h1{
       margin:0 0 6px 0;
@@ -113,14 +145,8 @@
     }
 
     .stats{
-      pointer-events:auto;
-      padding:14px 16px;
-      border:1px solid var(--stroke);
-      background: var(--panel);
-      backdrop-filter: blur(10px);
-      border-radius:16px;
-      box-shadow: var(--shadow);
       min-width: 280px;
+      padding:14px 16px;
     }
     .statRow{
       display:flex;
@@ -138,54 +164,61 @@
       overflow:hidden;
       margin-bottom:14px;
     }
-    .fill{
-      height:100%;
-      width:0%;
-      transition: width .25s ease;
-    }
+    .fill{ height:100%; width:0%; transition: width .25s ease; }
     .fill.progress{ background: linear-gradient(90deg, rgba(124,255,124,.85), rgba(76,201,240,.75)); }
     .fill.stress{ background: linear-gradient(90deg, rgba(255,77,109,.85), rgba(255,209,102,.55)); }
 
-    .panel{
+    /* Modal (quiz) */
+    .modalBack{
       position:fixed;
-      left:18px;
-      bottom:18px;
-      width:min(560px, calc(100vw - 36px));
+      inset:0;
+      background: rgba(0,0,0,.55);
+      backdrop-filter: blur(4px);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      z-index: 50;
+    }
+    .modal{
+      width: min(720px, 100%);
       border:1px solid var(--stroke);
       background: var(--panel2);
-      backdrop-filter: blur(12px);
       border-radius:16px;
       box-shadow: var(--shadow);
-      padding:14px 16px 12px 16px;
-      pointer-events:auto;
+      padding:16px 16px 14px 16px;
     }
-    .panelHeader{
+    .modalTop{
       display:flex;
-      align-items:center;
+      align-items:flex-start;
       justify-content:space-between;
       gap:10px;
       margin-bottom:10px;
     }
-    .sectorTag{
+    .tag{
       display:inline-flex;
-      gap:8px;
       align-items:center;
+      gap:8px;
       font-size:11px;
       color: var(--muted);
       text-transform:uppercase;
       letter-spacing:.35px;
     }
-    .dot{ width:8px; height:8px; border-radius:50%; background: var(--accent); box-shadow: 0 0 12px rgba(76,201,240,.55); }
+    .dot{
+      width:8px; height:8px; border-radius:50%;
+      background: var(--accent);
+      box-shadow: 0 0 12px rgba(76,201,240,.55);
+    }
     .dot.good{ background: var(--good); box-shadow: 0 0 12px rgba(124,255,124,.45); }
     .dot.warn{ background: var(--warn); box-shadow: 0 0 12px rgba(255,209,102,.35); }
     .dot.bad{ background: var(--bad); box-shadow: 0 0 12px rgba(255,77,109,.40); }
 
     .meta{
-      font-size:12px;
-      color: var(--muted);
       display:flex;
       gap:10px;
       flex-wrap:wrap;
+      color: var(--muted);
+      font-size:12px;
     }
     .pill{
       display:inline-flex;
@@ -198,21 +231,33 @@
     }
     .pill b{ color: var(--text); }
 
-    .sceneTitle{
-      margin:0 0 8px 0;
-      font-size:15px;
-      line-height:1.25;
-      color: var(--text);
-    }
-    .sceneText{
-      margin:0;
-      font-size:13px;
-      line-height:1.55;
-      color: rgba(231,240,255,.94);
-      white-space:pre-wrap;
-    }
+    .qTitle{ margin:0 0 8px 0; font-size:15px; line-height:1.25; }
+    .qText{ margin:0; font-size:13px; line-height:1.55; white-space:pre-wrap; color: rgba(231,240,255,.95); }
 
-    .hint{
+    .choices{
+      margin-top:12px;
+      display:grid;
+      gap:10px;
+    }
+    .choices button{
+      width:100%;
+      text-align:left;
+      padding:12px 12px;
+      border-radius:12px;
+      border:1px solid rgba(120,160,255,.18);
+      background: rgba(2,6,16,.48);
+      color: var(--text);
+      cursor:pointer;
+      font: inherit;
+      transition: transform .06s ease, border-color .12s ease, background .12s ease;
+    }
+    .choices button:hover{
+      border-color: rgba(76,201,240,.35);
+      background: rgba(6,14,30,.55);
+    }
+    .choices button:active{ transform: translateY(1px); }
+
+    .modalHint{
       margin-top:10px;
       font-size:12px;
       color: var(--muted);
@@ -222,58 +267,12 @@
       flex-wrap:wrap;
     }
 
-    /* optional: list of choices only on small screens (NO duplicates on desktop) */
-    .choicesList{
-      display:none;
-      margin-top:12px;
-      gap:10px;
-    }
-    .choicesList button{
-      width:100%;
-      text-align:left;
-      padding:12px 12px;
-      border-radius:12px;
-      border:1px solid rgba(120,160,255,.18);
-      background: rgba(2,6,16,.50);
-      color: var(--text);
-      cursor:pointer;
-      font: inherit;
-    }
-    .choicesList button:hover{
-      border-color: rgba(76,201,240,.35);
-      background: rgba(6,14,30,.55);
-    }
-
+    /* small screens */
     @media (max-width: 780px){
       .hudTop{ flex-direction:column; align-items:stretch; }
       .stats{ min-width: unset; }
-      .panel{ width: calc(100vw - 36px); }
-      .choicesList{ display:grid; }
+      .logo{ width: 220px; height: 64px; opacity:.14; }
     }
-
-    /* logo watermark */
-    .logo{
-      position:fixed;
-      right:18px;
-      bottom:18px;
-      width: 260px;
-      height: 70px;
-      opacity:.16;
-      pointer-events:none;
-      filter: drop-shadow(0 10px 24px rgba(0,0,0,.55));
-      background: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAjoAAABICAYAAACxxnIsAAAACXBIWXMAAAsSAAALEgHS3X78AAArsElEQVR4nO3deZBUVf7/8feu2Z6Z0mS2YB2W0qKkQFQKXl0i0p3rVqvU7m1W9V7q9b+1uV2q7qj3m+Zr2b8q9d2lqv2Gv1u2m2kQjQGm1oQmQkZkZ8zv3z8cYxw2wzJkzM5n3n3n7+9wz6xwz7nO+8+7wzjzj8uI0AAABg6r3mCwAAAHB2xv0AAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAABw4wEAAAByX8CwAAGq1z2wAAAABJRU5ErkJggg==");
-      background-size: contain;
-      background-repeat:no-repeat;
-      background-position:right bottom;
-    }
-
-    /* SVG */
-    svg{ width:100%; height:100%; display:block; }
-    .clickable{ cursor:pointer; }
-    .noSelect{ user-select:none; -webkit-user-select:none; }
-
-    /* prevent accidental clicks on non-choice nodes */
-    .nodePassive{ pointer-events:none; }
   </style>
 </head>
 
@@ -281,8 +280,8 @@
   <div class="mapStage" aria-hidden="true"></div>
   <div class="stars" aria-hidden="true"></div>
 
-  <!-- MAP SVG (FULLSCREEN) -->
-  <svg id="mapSvg" viewBox="0 0 1200 700" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Космическая карта">
+  <!-- FULLSCREEN MAP SVG -->
+  <svg id="mapSvg" viewBox="0 0 1200 700" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Карта секторов">
     <defs>
       <filter id="glowA" x="-50%" y="-50%" width="200%" height="200%">
         <feGaussianBlur stdDeviation="3" result="blur"/>
@@ -298,25 +297,29 @@
           <feMergeNode in="SourceGraphic"/>
         </feMerge>
       </filter>
-      <linearGradient id="routeGrad" x1="0" y1="0" x2="1" y2="0">
-        <stop offset="0%" stop-color="rgba(220,235,255,.14)"/>
-        <stop offset="60%" stop-color="rgba(76,201,240,.28)"/>
-        <stop offset="100%" stop-color="rgba(124,255,124,.30)"/>
-      </linearGradient>
+
+      <style>
+        .pulse {
+          animation: pulse 1.35s ease-in-out infinite;
+          transform-origin: center;
+        }
+        @keyframes pulse{
+          0%,100%{ opacity: .75; transform: scale(1); }
+          50%{ opacity: 1; transform: scale(1.08); }
+        }
+      </style>
     </defs>
 
-    <g id="routeLayer"></g>
-    <g id="nodesLayer"></g>
-    <g id="choicesLayer"></g>
+    <g id="beaconsLayer"></g>
     <g id="shipLayer"></g>
-    <g id="finishLayer"></g>
+    <g id="exitLayer"></g>
   </svg>
 
-  <!-- TOP HUD -->
+  <!-- HUD -->
   <div class="hudTop" aria-hidden="false">
     <div class="brand">
       <h1>Cbonds: Полёт к центру Галактики</h1>
-      <p>Выбирай сектор на карте. Каждый выбор влияет на прогресс и стресс. Победа: прогресс 100. Поражение: стресс 100.</p>
+      <p>Кликайте по доступным секторам. После перелёта откроется событие — выберите ответ, чтобы изменить прогресс и стресс.</p>
     </div>
 
     <div class="stats">
@@ -328,35 +331,36 @@
     </div>
   </div>
 
-  <!-- STORY PANEL -->
-  <div class="panel" role="region" aria-label="Событие">
-    <div class="panelHeader">
-      <div class="sectorTag"><span id="tagDot" class="dot"></span><span id="tagText">Сектор</span></div>
-      <div class="meta">
-        <span class="pill">Цикл: <b id="cycle">1</b></span>
-        <span class="pill">Узел: <b id="nodeId">—</b></span>
+  <div class="logo" aria-hidden="true"></div>
+
+  <!-- MODAL QUIZ -->
+  <div class="modalBack" id="modalBack" role="dialog" aria-modal="true" aria-label="Событие">
+    <div class="modal">
+      <div class="modalTop">
+        <div class="tag"><span id="tagDot" class="dot"></span><span id="tagText">Сектор</span></div>
+        <div class="meta">
+          <span class="pill">Цикл: <b id="cycle">1</b></span>
+          <span class="pill">Прилетели</span>
+        </div>
       </div>
-    </div>
 
-    <h2 class="sceneTitle" id="sceneTitle">Загрузка…</h2>
-    <p class="sceneText" id="sceneText"></p>
+      <h2 class="qTitle" id="qTitle">Загрузка…</h2>
+      <p class="qText" id="qText"></p>
 
-    <!-- only for small screens: list of choices (no duplicates on desktop) -->
-    <div class="choicesList" id="choicesList" aria-label="Варианты списком"></div>
+      <div class="choices" id="qChoices"></div>
 
-    <div class="hint">
-      <span>Подсказка: кликай по подсвеченным маякам (или тапай).</span>
-      <span>Финиш — крайняя правая точка (100).</span>
+      <div class="modalHint">
+        <span>После выбора окно закроется, и появятся новые доступные сектора.</span>
+        <span>Финиш — крайняя правая точка (100).</span>
+      </div>
     </div>
   </div>
 
-  <div class="logo" aria-hidden="true"></div>
-
 <script>
 (() => {
-  // ---------------------------
-  // State
-  // ---------------------------
+  // ============
+  // STATE
+  // ============
   const state = {
     progress: 0,
     stress: 20,
@@ -368,43 +372,38 @@
     },
     stepsSinceRandom: 0,
     pendingReturn: null,
-    currentNode: "E1",
-    visited: new Set(["E1"])
+    currentNode: "E1",   // where ship is
+    visited: new Set(["E1"]),
+    available: new Set(["E1"]), // clickable beacons right now
+    // travel lock
+    isTraveling: false
   };
 
-  // ---------------------------
-  // Helpers
-  // ---------------------------
-  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-  const rnd = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
-  const chance = (p) => Math.random() < p;
-
+  // ============
+  // UI
+  // ============
   const ui = {
+    beaconsLayer: document.getElementById("beaconsLayer"),
+    shipLayer: document.getElementById("shipLayer"),
+    exitLayer: document.getElementById("exitLayer"),
+
     progressFill: document.getElementById("progressFill"),
     stressFill: document.getElementById("stressFill"),
     progressNum: document.getElementById("progressNum"),
     stressNum: document.getElementById("stressNum"),
-    cycle: document.getElementById("cycle"),
-    nodeId: document.getElementById("nodeId"),
 
+    modalBack: document.getElementById("modalBack"),
     tagDot: document.getElementById("tagDot"),
     tagText: document.getElementById("tagText"),
-    sceneTitle: document.getElementById("sceneTitle"),
-    sceneText: document.getElementById("sceneText"),
-    choicesList: document.getElementById("choicesList"),
-
-    mapSvg: document.getElementById("mapSvg"),
-    routeLayer: document.getElementById("routeLayer"),
-    nodesLayer: document.getElementById("nodesLayer"),
-    choicesLayer: document.getElementById("choicesLayer"),
-    shipLayer: document.getElementById("shipLayer"),
-    finishLayer: document.getElementById("finishLayer"),
+    cycle: document.getElementById("cycle"),
+    qTitle: document.getElementById("qTitle"),
+    qText: document.getElementById("qText"),
+    qChoices: document.getElementById("qChoices"),
   };
 
-  function setTag(kind, text){
-    ui.tagText.textContent = text;
-    ui.tagDot.className = "dot" + (kind ? (" " + kind) : "");
-  }
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  const rnd = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+  const chance = (p) => Math.random() < p;
 
   function updateBars(){
     ui.progressFill.style.width = state.progress + "%";
@@ -412,136 +411,21 @@
     ui.progressNum.textContent = `${state.progress} / 100`;
     ui.stressNum.textContent = `${state.stress} / 100`;
     ui.cycle.textContent = String(state.cycle);
-    ui.nodeId.textContent = String(state.currentNode);
   }
 
-  function applyDelta(dp = 0, ds = 0){
-    state.progress = clamp(state.progress + dp, 0, 100);
-    state.stress   = clamp(state.stress + ds, 0, 100);
-    updateBars();
+  function setTag(kind, text){
+    ui.tagText.textContent = text;
+    ui.tagDot.className = "dot" + (kind ? (" " + kind) : "");
   }
 
-  function fatal(reason){
-    state.stress = 100;
-    updateBars();
-    renderEnd(false, reason);
-  }
-
-  function renderEnd(isWin, text){
-    state.currentNode = isWin ? "WIN" : "LOSE";
-    state.visited.add(state.currentNode);
-    updateBars();
-
-    setTag(isWin ? "good" : "bad", isWin ? "Финал: Центр Галактики" : "Финал: Срыв миссии");
-    ui.sceneTitle.textContent = isWin ? "Прыжок завершён" : "Системы отказали";
-    ui.sceneText.textContent = text;
-
-    // clear choices on map; show only restart beacon
-    renderChoiceBeacons([{
-      label: "Начать новый цикл",
-      _action: () => resetGame()
-    }], { isEnd:true });
-
-    renderChoicesList([{
-      label: "Начать новый цикл",
-      _action: () => resetGame()
-    }], true);
-
-    drawAll();
-  }
-
-  function endIfNeeded(){
-    if (state.stress >= 100) {
-      renderEnd(false, "Перегрузка систем.\nСтресс экипажа критический.\nКорабль уходит в дрейф.");
-      return true;
-    }
-    if (state.progress >= 100) {
-      renderEnd(true, "Корабль достигает центра Галактики.\nМиссия выполнена.\nФлот признаёт тебя Капитаном маршрута.");
-      return true;
-    }
-    return false;
-  }
-
-  function maybeInsertRandom(nextId){
-    if (state.pendingReturn) return nextId;
-
-    state.stepsSinceRandom++;
-    if (state.stepsSinceRandom < 2) return nextId;
-
-    state.stepsSinceRandom = 0;
-    state.pendingReturn = nextId;
-
-    const pool = Object.keys(randomEvents);
-
-    if (state.flags.asteroid_possible && chance(0.45)) return "R1";
-    if (state.flags.fuzzy_requirements && chance(0.35)) return chance(0.5) ? "R2" : "R4";
-
-    return pool[rnd(0, pool.length - 1)];
-  }
-
-  function resolveNext(next){
-    if (typeof next === "function") return next(state);
-    return next;
-  }
-
-  function goTo(nextId){
-    if (!nextId) return;
-    if (endIfNeeded()) return;
-
-    const injected = maybeInsertRandom(nextId);
-    state.currentNode = injected;
-    state.visited.add(injected);
-
-    if (nodes[injected]) renderNode(nodes[injected]);
-    else renderNode(randomEvents[injected]);
-
-    updateBars();
-    drawAll();
-  }
-
-  function choose(option){
-    if (option._action) { option._action(); return; }
-
-    if (option.fatal) {
-      fatal(option.fatalReason || "Фатальная ошибка на маршруте.\nСовет закрывает миссию.");
-      return;
-    }
-
-    if (option.setFlag) {
-      for (const [k,v] of Object.entries(option.setFlag)) state.flags[k] = v;
-    }
-
-    if (option.prob) {
-      if (chance(option.prob.p)) {
-        const s = option.prob.success;
-        if (s.setFlag) for (const [k,v] of Object.entries(s.setFlag)) state.flags[k] = v;
-        if (s.fatal) { fatal(s.fatalReason || "Катастрофа."); return; }
-        applyDelta(s.dp || 0, s.ds || 0);
-        goTo(resolveNext(s.next));
-        return;
-      } else {
-        const f = option.prob.fail;
-        if (f.setFlag) for (const [k,v] of Object.entries(f.setFlag)) state.flags[k] = v;
-        if (f.fatal) { fatal(f.fatalReason || "Катастрофа."); return; }
-        applyDelta(f.dp || 0, f.ds || 0);
-        goTo(resolveNext(f.next));
-        return;
-      }
-    }
-
-    applyDelta(option.dp || 0, option.ds || 0);
-    if (option.addStressLater) state.flags.audit_risk = true;
-    goTo(resolveNext(option.next));
-  }
-
-  // ---------------------------
-  // Content (узлы сохранены)
-  // ---------------------------
+  // ============
+  // CONTENT (твоя сюжетка)
+  // ============
   const nodes = {
     E1: {
       id:"E1",
-      sector:"Сектор: Орбита Клиентов",
-      title:"E1. Приём сигнала с планеты Клиентов",
+      sector:"Орбита Клиентов",
+      title:"Приём сигнала с планеты Клиентов",
       text:
 `Капитан получает зашифрованный сигнал.
 Клиенты требуют изменить курс. В эфире — шум: срочность, эмоции и расплывчатые обещания.`,
@@ -554,8 +438,8 @@
 
     E2: {
       id:"E2",
-      sector:"Сектор: Совет Межзвёздной Связи",
-      title:"E2. Совет Межзвёздной Связи",
+      sector:"Совет Межзвёздной Связи",
+      title:"Совет Межзвёздной Связи",
       text:
 `Собрались Главнокомандующий, Основатель Вселенной и офицеры связи.
 Тебя слушают внимательно. У тебя один шанс задать тон миссии.`,
@@ -568,8 +452,8 @@
 
     E3: {
       id:"E3",
-      sector:"Сектор: Звёздная карта",
-      title:"E3. Построение звёздной карты миссий",
+      sector:"Звёздная карта",
+      title:"Построение звёздной карты миссий",
       text:
 `Перед тобой десятки маршрутов и запросов.
 Каждый — потенциальная экспедиция. Но топлива и экипажей мало.`,
@@ -582,8 +466,8 @@
 
     E4: {
       id:"E4",
-      sector:"Сектор: Выбор звездолёта",
-      title:"E4. Выбор типа звездолёта",
+      sector:"Выбор корабля",
+      title:"Выбор типа корабля",
       text:
 `Нужно определить маршрут:
 тяжёлый крейсер Корпуса Развития — дальний и сложный путь,
@@ -597,8 +481,8 @@
 
     E5A: {
       id:"E5A",
-      sector:"Сектор: Корпус Развития",
-      title:"E5A. Совет Корпуса Развития",
+      sector:"Корпус Развития",
+      title:"Совет Корпуса Развития",
       text:
 `Верховный Архитектор и инженеры смотрят на тебя без эмоций.
 Им нужны ясность, риски и гарантия, что корабль не развалится на старте.`,
@@ -611,8 +495,8 @@
 
     E6A: {
       id:"E6A",
-      sector:"Сектор: Ангар Корпуса Развития",
-      title:"E6A. Ожидание сборки корабля",
+      sector:"Ангар",
+      title:"Ожидание сборки корабля",
       text:
 `Ангар перегружен. Инженеры заняты спасением всей Галактики.
 Можно ждать, можно давить, можно попытаться обойти очередь.`,
@@ -632,8 +516,8 @@
 
     E5B: {
       id:"E5B",
-      sector:"Сектор: Совет Флота",
-      title:"E5B. Прямой выход на Совет Флота",
+      sector:"Совет Флота",
+      title:"Прямой выход на Совет Флота",
       text:
 `Ты напрямую на Совете Флота.
 Главнокомандующий, Верховный Архитектор и Адмирал Технологий ждут защиты маршрута.`,
@@ -646,8 +530,8 @@
 
     E6B: {
       id:"E6B",
-      sector:"Сектор: Подготовка шаттла",
-      title:"E6B. Быстрый запуск шаттла",
+      sector:"Подготовка шаттла",
+      title:"Быстрый запуск шаттла",
       text:
 `Шаттл готов к старту, но всё держится на точности формулировок.
 Одно туманное слово — и траектория станет бесконечной.`,
@@ -660,8 +544,8 @@
 
     E7: {
       id:"E7",
-      sector:"Сектор: Детальный Разбор Траектории",
-      title:"E7. Разбор маршрута полёта",
+      sector:"Разбор траектории",
+      title:"Разбор маршрута полёта",
       text:
 `Собрались адмиралы, ведущие навигаторы и старшие инженеры.
 Если маршрут описан туманно — миссию вернут на повторную калибровку.`,
@@ -674,22 +558,22 @@
 
     E8: {
       id:"E8",
-      sector:"Сектор: Гиперпространство",
-      title:"E8. Расчёт топлива и времени",
+      sector:"Оценка сложности",
+      title:"Расчёт ресурсов и времени",
       text:
 `Миссия получает оценку сложности и попадает в очередь запуска.
-Мало топлива — быстрый прыжок. Много топлива — экспедиция на годы.`,
+Мало ресурсов — быстрый прыжок. Много ресурсов — экспедиция на годы.`,
       choices:[
         { label:"Честно оценить сложность и предложить этапность", dp:15, ds:-5, next:"E9" },
         { label:"Занижать оценки, чтобы пробиться в очередь", dp:20, ds:15, addStressLater:true, next:"E9" },
-        { label:"Пролезть вне очереди через давление и связи", fatal:true, fatalReason:"Попытка пролезть вне очереди.\nАдмирал Технологий фиксирует нарушение.\nМиссия закрыта приказом." }
+        { label:"Пролезть вне очереди через давление и связи", fatal:true, fatalReason:"Попытка пролезть вне очереди.\nАдмирал фиксирует нарушение.\nМиссия закрыта приказом." }
       ]
     },
 
     E9: {
       id:"E9",
-      sector:"Сектор: Большой Совет Флота",
-      title:"E9. Большой Совет Флота",
+      sector:"Большой Совет",
+      title:"Большой Совет",
       text:
 `Раз в две недели собирается Большой Совет.
 Идут эпические сражения за каждый слот запуска.`,
@@ -702,8 +586,8 @@
 
     E10: {
       id:"E10",
-      sector:"Сектор: Окно коррекции траектории",
-      title:"E10. Корректировка траектории",
+      sector:"Окно коррекции",
+      title:"Корректировка траектории",
       text:
 `После Совета — короткое окно, чтобы менять маршрут.
 Каждая правка может спасти миссию… или сорвать старт.`,
@@ -716,24 +600,22 @@
 
     E11: {
       id:"E11",
-      sector:"Сектор: Финальный прыжок",
-      title:"E11. Прыжок к центру Галактики",
+      sector:"Финальный прыжок",
+      title:"Прыжок к центру Галактики",
       text:
 `Центр Галактики рядом.
 Системы гудят на пределе. Любая ошибка — и корабль разорвёт на орбите стресса.
 
 Выбери: прыгать сейчас или калибровать ещё один цикл.`,
-      choices: []
+      choices: [] // dynamic
     }
   };
 
-  // ---------------------------
-  // Random events (исправлено: никакой "случайной fatal" при загрузке страницы)
-  // ---------------------------
   const randomEvents = {
     R1: {
       id:"R1",
-      title:"R1. Астероидный сигнал клиента",
+      sector:"Сигнал",
+      title:"Астероидный сигнал клиента",
       text:
 `Экстренный сигнал прорывается в эфир.
 Крупный клиент требует немедленного манёвра — иначе ударит по орбите.`,
@@ -743,10 +625,10 @@
         { label:"Игнорировать — 'не по плану'", fatal:true, fatalReason:"Ты игнорировал экстренный сигнал.\nКлиент сносит часть миссий с орбиты.\nЗапуск не состоится." }
       ]
     },
-
     R2: {
       id:"R2",
-      title:"R2. Контрабандисты требований",
+      sector:"Требования",
+      title:"Контрабандисты требований",
       text:
 `На стыковке появляется 'маленькая просьба': всего одна фича.
 Но у неё тень — ещё десять требований в грузовом отсеке.`,
@@ -756,10 +638,10 @@
         { label:"Согласиться без фиксации — 'потом разберёмся'", dp:10, ds:15, setFlag:{fuzzy_requirements:true} }
       ]
     },
-
     R3: {
       id:"R3",
-      title:"R3. Туманность аналитики",
+      sector:"Данные",
+      title:"Туманность аналитики",
       text:
 `Данные противоречат друг другу.
 Каждая метрика показывает другую Вселенную. Решение всё равно нужно сейчас.`,
@@ -769,12 +651,12 @@
         { label:"Отложить решение до идеальных данных", dp:-5, ds:5 }
       ]
     },
-
     R4: {
       id:"R4",
-      title:"R4. Конфликт командиров отсеков",
+      sector:"Команды",
+      title:"Конфликт командиров отсеков",
       text:
-`Командиры спорят: чей отсек важнее для прыжка.
+`Командиры спорят: чей отсек важнее.
 Конфликт разогревает стресс быстрее, чем реактор — топливо.`,
       choices:[
         { label:"Созвать мини-совет и развести ответственность", dp:5, ds:5 },
@@ -789,12 +671,12 @@
         }
       ]
     },
-
     R5: {
       id:"R5",
-      title:"R5. Потеря ключевого инженера",
+      sector:"Ресурсы",
+      title:"Потеря ключевого инженера",
       text:
-`Ключевой инженер уходит на другую миссию: 'спасать Галактику'.
+`Ключевой инженер уходит на другую миссию.
 Нужно либо перестроить план, либо сломать людей.`,
       choices:[
         { label:"Перестроить план и сократить объём", dp:5, ds:10 },
@@ -802,10 +684,10 @@
         { label:"Заморозить часть миссии ради стабильности", dp:-5, ds:-5 }
       ]
     },
-
     R6: {
       id:"R6",
-      title:"R6. Неожиданный союзник",
+      sector:"Союз",
+      title:"Неожиданный союзник",
       text:
 `Офицер из соседнего сектора предлагает помощь: ресурсы и канал к Совету.
 Но за помощь всегда платят политикой.`,
@@ -815,10 +697,10 @@
         { label:"Перегрузить союзника и требовать больше", dp:10, ds:10 }
       ]
     },
-
     R7: {
       id:"R7",
-      title:"R7. Поломка навигации",
+      sector:"Навигация",
+      title:"Поломка навигации",
       text:
 `Навигационные датчики дают дрейф.
 Можно починить тщательно или поставить быстрый костыль.`,
@@ -827,10 +709,10 @@
         { label:"Сделать быстрый костыль и лететь дальше", dp:10, ds:10 }
       ]
     },
-
     R8: {
       id:"R8",
-      title:"R8. Внешний аудит траектории",
+      sector:"Аудит",
+      title:"Внешний аудит траектории",
       text:
 `Пришёл запрос на аудит: соответствие маршрута правилам и обещаниям.
 Если ты где-то 'занижал' сложность — это всплывёт.`,
@@ -856,9 +738,43 @@
     }
   };
 
-  // ---------------------------
-  // Map layout (полноэкранная карта)
-  // ---------------------------
+  // ============
+  // MAP GEOMETRY (только точки)
+  // ============
+  // Внутренние ID не показываем на карте.
+  // Раскладка — "грид колонок", но без линий, только маяки.
+  const NODE_POS = {
+    E1:  {x: 140, y: 360},
+    E2:  {x: 260, y: 250},
+    E3:  {x: 360, y: 460},
+    E4:  {x: 480, y: 320},
+    E5A: {x: 560, y: 220},
+    E6A: {x: 640, y: 430},
+    E5B: {x: 580, y: 490},
+    E6B: {x: 700, y: 300},
+    E7:  {x: 760, y: 360},
+    E8:  {x: 880, y: 240},
+    E9:  {x: 930, y: 470},
+    E10: {x: 1050,y: 340},
+    E11: {x: 1120,y: 300},
+
+    // Random events (раскиданы вокруг средней/правой зоны)
+    R1:  {x: 520, y: 170},
+    R2:  {x: 690, y: 540},
+    R3:  {x: 860, y: 360},
+    R4:  {x: 760, y: 200},
+    R5:  {x: 920, y: 560},
+    R6:  {x: 620, y: 150},
+    R7:  {x: 980, y: 230},
+    R8:  {x: 1010,y: 530},
+  };
+
+  // Exit marker always far right (progress 100)
+  const EXIT_POS = {x: 1180, y: 300};
+
+  // ============
+  // SVG helpers
+  // ============
   const SVG_NS = "http://www.w3.org/2000/svg";
   const el = (name, attrs = {}, text = null) => {
     const n = document.createElementNS(SVG_NS, name);
@@ -868,55 +784,7 @@
   };
   const clear = (node) => { while(node.firstChild) node.removeChild(node.firstChild); };
 
-  // fixed positions (feel like "sector columns")
-  const NODE_POS = {
-    E1:  {x:120, y:360},
-    E2:  {x:230, y:260},
-    E3:  {x:330, y:450},
-    E4:  {x:440, y:320},
-    E5A: {x:540, y:240},
-    E6A: {x:610, y:420},
-    E5B: {x:560, y:470},
-    E6B: {x:650, y:300},
-    E7:  {x:720, y:360},
-    E8:  {x:820, y:260},
-    E9:  {x:900, y:430},
-    E10: {x:1020,y:340},
-    E11: {x:1100,y:300},
-
-    // random events: near mid/right
-    R1:  {x:520, y:170},
-    R2:  {x:680, y:520},
-    R3:  {x:820, y:360},
-    R4:  {x:740, y:200},
-    R5:  {x:900, y:540},
-    R6:  {x:610, y:150},
-    R7:  {x:980, y:230},
-    R8:  {x:1010,y:520},
-
-    WIN:  {x:1160,y:270},
-    LOSE: {x:1160,y:390}
-  };
-
-  const MAIN_CHAIN = ["E1","E2","E3","E4","E7","E8","E9","E10","E11"];
-
-  // route line
-  function drawRoute(){
-    clear(ui.routeLayer);
-    // soft polyline through main chain
-    const pts = MAIN_CHAIN.map(id => NODE_POS[id]).filter(Boolean);
-    const d = pts.map((p,i)=> (i===0?`M ${p.x} ${p.y}`:`L ${p.x} ${p.y}`)).join(" ");
-    ui.routeLayer.appendChild(el("path", {
-      d,
-      fill:"none",
-      stroke:"url(#routeGrad)",
-      "stroke-width":"3",
-      "stroke-linecap":"round",
-      opacity:"0.85"
-    }));
-  }
-
-  function beaconDiamond(x,y, color, size=12, glow="glowA"){
+  function diamond(x,y, color, size=10, glow="glowA"){
     const g = el("g", { transform:`translate(${x} ${y})`, filter:`url(#${glow})` });
     g.appendChild(el("path", {
       d: `M 0 ${-size} L ${size} 0 L 0 ${size} L ${-size} 0 Z`,
@@ -927,77 +795,416 @@
     return g;
   }
 
-  function drawNodes(){
-    clear(ui.nodesLayer);
-
-    // draw all E nodes as passive
-    for (const [id,p] of Object.entries(NODE_POS)){
-      if (!id.startsWith("E")) continue;
-      const visited = state.visited.has(id);
-      const isCurrent = (state.currentNode === id);
-      const r = isCurrent ? 7.5 : (visited ? 6.5 : 5.5);
-
-      const c = el("circle", {
-        cx:p.x, cy:p.y, r,
-        fill: visited ? "rgba(220,235,255,.45)" : "rgba(220,235,255,.20)",
-        stroke: isCurrent ? "rgba(76,201,240,.90)" : "rgba(0,0,0,.35)",
-        "stroke-width": isCurrent ? "2" : "1",
-        filter: isCurrent ? "url(#glowA)" : "none",
-        class:"nodePassive"
-      });
-      ui.nodesLayer.appendChild(c);
-
-      // tiny label
-      ui.nodesLayer.appendChild(el("text",{
-        x:p.x + 10, y:p.y + 4,
-        fill:"rgba(231,240,255,.45)",
-        "font-size":"10",
-        "font-family":"ui-monospace, Menlo, Consolas, monospace",
-        class:"nodePassive"
-      }, id));
-    }
+  function circle(x,y, r, fill, stroke, sw=1, glow=null){
+    return el("circle", {
+      cx:x, cy:y, r,
+      fill,
+      stroke,
+      "stroke-width": String(sw),
+      filter: glow ? `url(#${glow})` : "none"
+    });
   }
 
-  function drawFinish(){
-    clear(ui.finishLayer);
-    // finish indicator is ALWAYS far right (progress 100)
-    const p = {x:1180, y:300};
-    const g = beaconDiamond(p.x, p.y, "rgba(124,255,124,.95)", 15, "glowB");
-    g.classList.add("nodePassive");
-    ui.finishLayer.appendChild(g);
-    ui.finishLayer.appendChild(el("text",{
-      x:p.x-40, y:p.y-22,
+  // ============
+  // GAME FLOW
+  // ============
+  function applyDelta(dp=0, ds=0){
+    state.progress = clamp(state.progress + dp, 0, 100);
+    state.stress   = clamp(state.stress + ds, 0, 100);
+    updateBars();
+  }
+
+  function endIfNeeded(){
+    if (state.stress >= 100){
+      openQuiz({
+        sector:"Финал",
+        title:"Системы отказали",
+        text:"Перегрузка систем.\nСтресс экипажа критический.\nКорабль уходит в дрейф.",
+        choices:[{ label:"Начать новый цикл", _action: () => resetGame() }]
+      }, { kind:"bad" });
+      return true;
+    }
+    if (state.progress >= 100){
+      openQuiz({
+        sector:"Финал",
+        title:"Прыжок завершён",
+        text:"Корабль достигает центра Галактики.\nМиссия выполнена.\nФлот признаёт тебя Капитаном маршрута.",
+        choices:[{ label:"Начать новый цикл", _action: () => resetGame() }]
+      }, { kind:"good" });
+      return true;
+    }
+    return false;
+  }
+
+  function maybeInsertRandom(nextId){
+    if (state.pendingReturn) return nextId;
+
+    state.stepsSinceRandom++;
+    if (state.stepsSinceRandom < 2) return nextId;
+
+    state.stepsSinceRandom = 0;
+    state.pendingReturn = nextId;
+
+    const pool = Object.keys(randomEvents);
+    if (state.flags.asteroid_possible && chance(0.45)) return "R1";
+    if (state.flags.fuzzy_requirements && chance(0.35)) return chance(0.5) ? "R2" : "R4";
+    return pool[rnd(0, pool.length - 1)];
+  }
+
+  function resolveNext(next){
+    if (typeof next === "function") return next(state);
+    return next;
+  }
+
+  // После прохождения квиза на текущем секторе — вычисляем доступные сектора:
+  // это уникальные next-id из вариантов ответа (с учётом вероятностей).
+  function computeNextIdsFromNode(node){
+    if (!node) return [];
+
+    // Финальный узел: выборы динамические
+    if (node.id === "E11"){
+      return ["E11_JUMP", "E11_CALIBRATE"]; // виртуальные “сектора-решения” (на карте не показываем отдельно)
+    }
+
+    const ids = new Set();
+    for (const c of (node.choices || [])){
+      if (c.prob){
+        if (c.prob.success && c.prob.success.next) ids.add(resolveNext(c.prob.success.next));
+        if (c.prob.fail && c.prob.fail.next) ids.add(resolveNext(c.prob.fail.next));
+      } else if (c.next){
+        ids.add(resolveNext(c.next));
+      } else {
+        // random event choices often have no explicit next -> will return to pendingReturn
+        // we do nothing here
+      }
+    }
+    return [...ids].filter(Boolean);
+  }
+
+  function setAvailable(ids){
+    state.available = new Set(ids);
+    // всегда разрешаем клик по текущему сектору, чтобы открыть квиз
+    state.available.add(state.currentNode);
+    renderMap();
+  }
+
+  // ============
+  // TRAVEL + QUIZ
+  // ============
+  function travelTo(nodeId){
+    if (state.isTraveling) return;
+    if (!state.available.has(nodeId)) return;
+
+    // перелёт
+    state.isTraveling = true;
+
+    const from = NODE_POS[state.currentNode] || NODE_POS["E1"];
+    const to   = (nodeId === "EXIT") ? EXIT_POS : (NODE_POS[nodeId] || from);
+
+    animateShip(from, to, 520, () => {
+      state.isTraveling = false;
+      state.currentNode = nodeId;
+      state.visited.add(nodeId);
+
+      // открыть квиз по прилёту
+      const node = getNodeById(nodeId);
+      if (!node){
+        // если нет (теоретически) — просто обновить карту
+        renderMap();
+        return;
+      }
+      openNodeQuiz(node);
+    });
+  }
+
+  function getNodeById(id){
+    if (nodes[id]) return nodes[id];
+    if (randomEvents[id]) return randomEvents[id];
+    return null;
+  }
+
+  function openNodeQuiz(node){
+    // динамика финального узла
+    if (node.id === "E11"){
+      const kind = (state.progress >= 85 && state.stress < 80) ? "good" : (state.stress >= 80 ? "bad" : "warn");
+      setTag(kind, node.sector);
+
+      const c1 = {
+        label:"Синхронизировать системы и выполнить прыжок",
+        _action: () => {
+          closeQuiz();
+          applyDelta(10, 10);
+          if (endIfNeeded()) return;
+
+          // принудительное событие R7
+          state.pendingReturn = "E11";
+          queueNextForced("R7");
+        }
+      };
+      const c2 = {
+        label:"Сделать финальную калибровку перед прыжком",
+        _action: () => {
+          closeQuiz();
+          applyDelta(5, -5);
+          if (endIfNeeded()) return;
+
+          state.pendingReturn = "E11";
+          let pick = Object.keys(randomEvents)[rnd(0, Object.keys(randomEvents).length - 1)];
+          if (state.flags.audit_risk && chance(0.5)) pick = "R8";
+          queueNextForced(pick);
+        }
+      };
+
+      openQuiz({
+        sector: node.sector,
+        title: node.title,
+        text: node.text,
+        choices: [c1, c2]
+      }, { kind });
+      return;
+    }
+
+    const isRandom = node.id.startsWith("R");
+    const kind = isRandom ? "warn" : "";
+    setTag(kind, node.sector);
+
+    // Собираем обработчики выбора
+    const preparedChoices = (node.choices || []).map(c => {
+      return {
+        label: c.label,
+        _action: () => {
+          closeQuiz();
+
+          // fatal
+          if (c.fatal){
+            applyDelta(0, 100);
+            openQuiz({
+              sector:"Финал",
+              title:"Системы отказали",
+              text: c.fatalReason || "Катастрофа.",
+              choices:[{ label:"Начать новый цикл", _action: () => resetGame() }]
+            }, { kind:"bad" });
+            return;
+          }
+
+          // flags
+          if (c.setFlag){
+            for (const [k,v] of Object.entries(c.setFlag)) state.flags[k] = v;
+          }
+
+          // probability
+          if (c.prob){
+            if (chance(c.prob.p)){
+              const s = c.prob.success;
+              if (s.setFlag) for (const [k,v] of Object.entries(s.setFlag)) state.flags[k] = v;
+              if (s.fatal){
+                applyDelta(0, 100);
+                openQuiz({
+                  sector:"Финал",
+                  title:"Системы отказали",
+                  text: s.fatalReason || "Катастрофа.",
+                  choices:[{ label:"Начать новый цикл", _action: () => resetGame() }]
+                }, { kind:"bad" });
+                return;
+              }
+              applyDelta(s.dp || 0, s.ds || 0);
+              if (endIfNeeded()) return;
+
+              const next = resolveNext(s.next);
+              if (next) queueNext(next);
+              else queueAfterRandomReturn();
+              return;
+            } else {
+              const f = c.prob.fail;
+              if (f.setFlag) for (const [k,v] of Object.entries(f.setFlag)) state.flags[k] = v;
+              if (f.fatal){
+                applyDelta(0, 100);
+                openQuiz({
+                  sector:"Финал",
+                  title:"Системы отказали",
+                  text: f.fatalReason || "Катастрофа.",
+                  choices:[{ label:"Начать новый цикл", _action: () => resetGame() }]
+                }, { kind:"bad" });
+                return;
+              }
+              applyDelta(f.dp || 0, f.ds || 0);
+              if (endIfNeeded()) return;
+
+              const next = resolveNext(f.next);
+              if (next) queueNext(next);
+              else queueAfterRandomReturn();
+              return;
+            }
+          }
+
+          // plain delta
+          applyDelta(c.dp || 0, c.ds || 0);
+          if (c.addStressLater) state.flags.audit_risk = true;
+
+          if (endIfNeeded()) return;
+
+          // next
+          const next = resolveNext(c.next);
+          if (next){
+            queueNext(next);
+          } else {
+            // random events often return to pendingReturn
+            queueAfterRandomReturn();
+          }
+        }
+      };
+    });
+
+    openQuiz({
+      sector: node.sector,
+      title: node.title,
+      text: node.text,
+      choices: preparedChoices
+    }, { kind });
+  }
+
+  function queueAfterRandomReturn(){
+    // если это было случайное событие без явного next
+    const pending = state.pendingReturn;
+    state.pendingReturn = null;
+    if (pending) queueNext(pending);
+    else setAvailable([state.currentNode]); // fallback
+  }
+
+  function queueNext(nextId){
+    // Вставка случайного события между узлами (как раньше), но теперь через “доступные сектора”
+    const injected = maybeInsertRandom(nextId);
+
+    // если вставилось событие, делаем доступным только его (чтобы пользователь кликнул и “перелетел”)
+    if (injected !== nextId){
+      // подготовим доступность: только случайное событие
+      // но на карте оно выглядит как обычный доступный маяк
+      setAvailable([injected]);
+      return;
+    }
+
+    // обычный переход: доступен один следующий сектор (как в твоей сюжетке линейно)
+    setAvailable([nextId]);
+  }
+
+  function queueNextForced(id){
+    // принудительный “следующий сектор” без дополнительной вставки
+    setAvailable([id]);
+  }
+
+  // ============
+  // MODAL
+  // ============
+  function openQuiz(payload, { kind="" } = {}){
+    setTag(kind, payload.sector || "Сектор");
+    ui.qTitle.textContent = payload.title || "";
+    ui.qText.textContent = payload.text || "";
+
+    ui.qChoices.innerHTML = "";
+    for (const c of (payload.choices || [])){
+      const btn = document.createElement("button");
+      btn.textContent = c.label;
+      btn.addEventListener("click", () => {
+        if (c._action) c._action();
+      });
+      ui.qChoices.appendChild(btn);
+    }
+
+    ui.modalBack.style.display = "flex";
+  }
+
+  function closeQuiz(){
+    ui.modalBack.style.display = "none";
+  }
+
+  // close modal on backdrop click (optional)
+  ui.modalBack.addEventListener("click", (e) => {
+    if (e.target === ui.modalBack) {
+      // не закрываем, чтобы не ломать flow — пользователь должен выбрать
+    }
+  });
+
+  // ============
+  // RENDER MAP (только точки)
+  // ============
+  function renderMap(){
+    clear(ui.beaconsLayer);
+    clear(ui.shipLayer);
+    clear(ui.exitLayer);
+
+    // draw exit
+    const exitG = diamond(EXIT_POS.x, EXIT_POS.y, "rgba(124,255,124,.95)", 14, "glowB");
+    ui.exitLayer.appendChild(exitG);
+    ui.exitLayer.appendChild(el("text",{
+      x: EXIT_POS.x - 44, y: EXIT_POS.y - 20,
       fill:"rgba(231,240,255,.80)",
       "font-size":"12",
-      "font-family":"ui-monospace, Menlo, Consolas, monospace",
-      class:"nodePassive"
+      "font-family":"ui-monospace, Menlo, Consolas, monospace"
     }, "100"));
+
+    // beacons: show all story nodes + possible random nodes
+    const allIds = Object.keys(NODE_POS);
+
+    for (const id of allIds){
+      const p = NODE_POS[id];
+      const isVisited = state.visited.has(id);
+      const isAvailable = state.available.has(id);
+      const isCurrent = (state.currentNode === id);
+
+      // style
+      let color = "rgba(220,235,255,.22)";
+      let size = 6;
+
+      if (isVisited) { color = "rgba(220,235,255,.35)"; size = 7; }
+      if (isAvailable) { color = "rgba(76,201,240,.95)"; size = 10; }
+      if (isCurrent) { color = "rgba(76,201,240,.95)"; size = 9; }
+
+      // “тип” событий (не обязательно, но приятно)
+      // random events подсветим чуть иначе (желтоватый оттенок), но только если доступны/посещены
+      const node = getNodeById(id);
+      const isRandom = node && node.id && node.id.startsWith("R");
+      if (isRandom && isAvailable) color = "rgba(255,209,102,.95)";
+
+      const g = diamond(p.x, p.y, color, size, isAvailable ? "glowB" : "glowA");
+
+      // кликабельность только для доступных
+      if (isAvailable && !state.isTraveling){
+        g.classList.add("clickable","noSelect");
+        g.classList.add("pulse");
+        g.setAttribute("tabindex","0");
+        g.setAttribute("role","button");
+        g.setAttribute("aria-label","Перелететь в сектор");
+        g.appendChild(el("title", {}, "Перелететь"));
+
+        g.addEventListener("click", (e) => {
+          e.stopPropagation();
+          travelTo(id);
+        });
+        g.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") travelTo(id);
+        });
+      } else {
+        // не ловить клики
+        g.style.pointerEvents = "none";
+      }
+
+      ui.beaconsLayer.appendChild(g);
+
+      // если текущий сектор — лёгкое кольцо вокруг
+      if (isCurrent){
+        ui.beaconsLayer.appendChild(circle(p.x, p.y, 14, "rgba(76,201,240,.08)", "rgba(76,201,240,.35)", 2, "glowA"));
+      }
+    }
+
+    drawShip();
   }
 
   function drawShip(){
-    clear(ui.shipLayer);
-    // ship pinned to current node if known, otherwise based on progress along main chain
-    const pn = NODE_POS[state.currentNode];
-    const t = clamp(state.progress / 100, 0, 1);
+    // ракета стоит на текущем секторе
+    const p = NODE_POS[state.currentNode] || NODE_POS["E1"];
+    const g = el("g", { transform:`translate(${p.x} ${p.y})`, filter:"url(#glowB)" });
 
-    // approximate interpolation along main chain
-    const chainPts = MAIN_CHAIN.map(id => NODE_POS[id]);
-    const segCount = chainPts.length - 1;
-    const segFloat = t * segCount;
-    const i = Math.min(segCount - 1, Math.max(0, Math.floor(segFloat)));
-    const lt = segFloat - i;
-    const a = chainPts[i], b = chainPts[i+1];
-    const interp = { x: a.x + (b.x-a.x)*lt, y: a.y + (b.y-a.y)*lt };
-
-    const pos = pn || interp;
-
-    const g = el("g", { transform:`translate(${pos.x} ${pos.y})`, filter:"url(#glowB)" });
-    g.appendChild(el("circle",{
-      cx:0, cy:0, r:11,
-      fill:"rgba(76,201,240,.18)",
-      stroke:"rgba(76,201,240,.70)",
-      "stroke-width":"2"
-    }));
+    g.appendChild(circle(0,0, 11, "rgba(76,201,240,.18)", "rgba(76,201,240,.70)", 2, null));
     g.appendChild(el("path",{
       d:"M -2 -8 L 12 0 L -2 8 Z",
       fill:"rgba(76,201,240,.95)",
@@ -1010,195 +1217,44 @@
       "font-size":"12",
       "font-family":"ui-monospace, Menlo, Consolas, monospace"
     }, `${state.progress}%`));
+
     ui.shipLayer.appendChild(g);
   }
 
-  // ---------------------------
-  // Choices rendering (ONLY one set; no duplicates on desktop)
-  // ---------------------------
-  function renderChoicesList(choices, isEnd){
-    ui.choicesList.innerHTML = "";
-    // used only on small screens via CSS
-    for (const c of choices){
-      const btn = document.createElement("button");
-      btn.textContent = c.label;
-      btn.addEventListener("click", () => choose(c));
-      if (isEnd) btn.style.borderColor = "rgba(124,255,124,.45)";
-      ui.choicesList.appendChild(btn);
-    }
-  }
+  function animateShip(from, to, ms, done){
+    // простая анимация без внешних libs
+    const start = performance.now();
+    const ease = (t) => (t<0.5 ? 2*t*t : 1 - Math.pow(-2*t+2,2)/2);
 
-  function renderChoiceBeacons(choices, { isEnd=false } = {}){
-    clear(ui.choicesLayer);
+    function frame(now){
+      const t = clamp((now - start) / ms, 0, 1);
+      const k = ease(t);
+      const x = from.x + (to.x - from.x) * k;
+      const y = from.y + (to.y - from.y) * k;
 
-    if (isEnd){
-      // place restart beacon near left-bottom area, clickable
-      const p = {x:220, y:610};
-      const g = beaconDiamond(p.x, p.y, "rgba(124,255,124,.95)", 16, "glowB");
-      g.classList.add("clickable","noSelect");
-      g.setAttribute("tabindex","0");
-      g.setAttribute("role","button");
-      g.setAttribute("aria-label", choices[0].label);
-      g.appendChild(el("title", {}, choices[0].label));
-      g.addEventListener("click", () => choose(choices[0]));
-      g.addEventListener("keydown", (e)=>{ if(e.key==="Enter") choose(choices[0]); });
-      ui.choicesLayer.appendChild(g);
-      ui.choicesLayer.appendChild(el("text",{
-        x:p.x+22, y:p.y+5,
-        fill:"rgba(231,240,255,.90)",
-        "font-size":"12",
-        "font-family":"ui-monospace, Menlo, Consolas, monospace"
-      }, "NEW CYCLE"));
-      return;
-    }
-
-    // show choice beacons around current position (NOT on finish, NOT clickable on passive nodes)
-    const base = NODE_POS[state.currentNode] || {x:420, y:360};
-    const ring = [
-      {dx: 140, dy:-90},
-      {dx: 170, dy:  0},
-      {dx: 140, dy: 90},
-      {dx:  90, dy: 140},
-      {dx:  90, dy:-140},
-    ];
-
-    choices.forEach((c, idx) => {
-      const pos = { x: base.x + ring[idx % ring.length].dx, y: base.y + ring[idx % ring.length].dy };
-
-      const g = beaconDiamond(pos.x, pos.y, "rgba(76,201,240,.95)", 14, "glowB");
-      g.classList.add("clickable","noSelect");
-      g.setAttribute("tabindex","0");
-      g.setAttribute("role","button");
-      g.setAttribute("aria-label", c.label);
-      g.appendChild(el("title", {}, c.label));
-
-      g.addEventListener("click", () => choose(c));
-      g.addEventListener("keydown", (e)=>{ if(e.key==="Enter") choose(c); });
-
-      // short label: show next node id if exists, else "?"
-      const next = resolveNext(c.next);
-      const short = (typeof next === "string") ? next : "?";
-      ui.choicesLayer.appendChild(g);
-      ui.choicesLayer.appendChild(el("text",{
-        x: pos.x + 18, y: pos.y + 4,
-        fill:"rgba(231,240,255,.78)",
-        "font-size":"11",
-        "font-family":"ui-monospace, Menlo, Consolas, monospace"
-      }, short));
-    });
-  }
-
-  // ---------------------------
-  // Render node
-  // ---------------------------
-  function renderNode(node){
-    if (!node) return;
-
-    const isRandom = node.id && node.id.startsWith("R");
-    if (isRandom) {
-      setTag("warn", "Неожиданное событие");
-    } else {
-      setTag("", node.sector || "Сектор");
-    }
-
-    ui.sceneTitle.textContent = node.title;
-    ui.sceneText.textContent = node.text;
-
-    let choices = node.choices || [];
-
-    // random nodes: after selecting, return to pendingReturn unless explicit next
-    if (isRandom) {
-      choices = (node.choices || []).map(c => ({
-        ...c,
-        _action: () => {
-          const pending = state.pendingReturn;
-          state.pendingReturn = null;
-
-          if (c.fatal) { fatal(c.fatalReason || "Катастрофа."); return; }
-          if (c.setFlag) for (const [k,v] of Object.entries(c.setFlag)) state.flags[k] = v;
-
-          // probabilistic choice inside random event option (if any)
-          if (c.prob){
-            if (chance(c.prob.p)){
-              const s = c.prob.success;
-              if (s.setFlag) for (const [k,v] of Object.entries(s.setFlag)) state.flags[k] = v;
-              if (s.fatal) { fatal(s.fatalReason || "Катастрофа."); return; }
-              applyDelta(s.dp || 0, s.ds || 0);
-              if (s.next) { goTo(resolveNext(s.next)); return; }
-            } else {
-              const f = c.prob.fail;
-              if (f.setFlag) for (const [k,v] of Object.entries(f.setFlag)) state.flags[k] = v;
-              if (f.fatal) { fatal(f.fatalReason || "Катастрофа."); return; }
-              applyDelta(f.dp || 0, f.ds || 0);
-              if (f.next) { goTo(resolveNext(f.next)); return; }
-            }
-          } else {
-            applyDelta(c.dp || 0, c.ds || 0);
-          }
-
-          const nextExplicit = resolveNext(c.next);
-          if (nextExplicit) { goTo(nextExplicit); return; }
-          goTo(pending || "E11");
-        }
+      clear(ui.shipLayer);
+      const g = el("g", { transform:`translate(${x} ${y})`, filter:"url(#glowB)" });
+      g.appendChild(circle(0,0, 11, "rgba(76,201,240,.18)", "rgba(76,201,240,.70)", 2));
+      g.appendChild(el("path",{
+        d:"M -2 -8 L 12 0 L -2 8 Z",
+        fill:"rgba(76,201,240,.95)",
+        stroke:"rgba(0,0,0,.35)",
+        "stroke-width":"1"
       }));
+      ui.shipLayer.appendChild(g);
+
+      if (t < 1) requestAnimationFrame(frame);
+      else {
+        renderMap();
+        done();
+      }
     }
-
-    // E11 dynamic choices
-    if (node.id === "E11") {
-      if (state.progress >= 85 && state.stress < 80) setTag("good", "Финал: Прыжок");
-      else if (state.stress >= 80) setTag("bad", "Финал: На пределе");
-      else setTag("warn", "Финал: Риск");
-
-      const c1 = {
-        label:"Синхронизировать системы и выполнить прыжок",
-        _action: () => {
-          applyDelta(10, 10);
-          if (endIfNeeded()) return;
-
-          state.pendingReturn = "E11";
-          state.currentNode = "R7";
-          state.visited.add("R7");
-          renderNode(randomEvents["R7"]);
-          updateBars();
-          drawAll();
-        }
-      };
-
-      const c2 = {
-        label:"Сделать финальную калибровку перед прыжком",
-        _action: () => {
-          applyDelta(5, -5);
-          if (endIfNeeded()) return;
-
-          state.pendingReturn = "E11";
-          let pick = Object.keys(randomEvents)[rnd(0, Object.keys(randomEvents).length - 1)];
-          if (state.flags.audit_risk && chance(0.5)) pick = "R8";
-
-          state.currentNode = pick;
-          state.visited.add(pick);
-          renderNode(randomEvents[pick]);
-          updateBars();
-          drawAll();
-        }
-      };
-
-      choices = [c1, c2];
-    }
-
-    // show beacons (main interaction)
-    renderChoiceBeacons(choices, { isEnd:false });
-    renderChoicesList(choices, false);
-
-    drawAll();
+    requestAnimationFrame(frame);
   }
 
-  function drawAll(){
-    drawRoute();
-    drawNodes();
-    drawFinish();
-    drawShip();
-  }
-
+  // ============
+  // RESET
+  // ============
   function resetGame(){
     state.progress = 0;
     state.stress = 20;
@@ -1208,17 +1264,24 @@
     state.pendingReturn = null;
     state.currentNode = "E1";
     state.visited = new Set(["E1"]);
+    state.available = new Set(["E1"]);
+    state.isTraveling = false;
 
     updateBars();
-    renderNode(nodes["E1"]);
+    closeQuiz();
+    renderMap();
   }
 
-  // ---------------------------
-  // Boot
-  // ---------------------------
+  // ============
+  // BOOT
+  // ============
   updateBars();
-  drawAll();
-  renderNode(nodes[state.currentNode]);
+  renderMap();
+
+  // Старт: игрок кликает по E1 (доступен) -> прилет -> открывается квиз
+  // (Можно и автозапуском, но ты просил “пользователь кликает на сектор”.)
+
+  // Когда квиз E1 пройден — откроется следующий сектор (через setAvailable).
 
 })();
 </script>
