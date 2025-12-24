@@ -7,10 +7,9 @@
 
   <style>
     :root{
-      --bg0:#02040a;
       --panel: rgba(8,14,28,.72);
-      --panel2: rgba(10,18,34,.84);
-      --stroke: rgba(120,160,255,.20);
+      --panel2: rgba(10,18,34,.86);
+      --stroke: rgba(120,160,255,.22);
       --text: #e7f0ff;
       --muted:#a6b7d8;
 
@@ -18,11 +17,6 @@
       --good:#7CFF7C;
       --bad:#ff4d6d;
       --warn:#ffd166;
-
-      --nodeIdle: rgba(220,235,255,.22);
-      --nodeVisited: rgba(220,235,255,.38);
-      --nodeAvailable: rgba(76,201,240,.95);
-      --nodeExit: rgba(124,255,124,.95);
 
       --shadow: 0 24px 80px rgba(0,0,0,.55);
     }
@@ -41,69 +35,16 @@
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     }
 
-    /* Fullscreen map background */
-    .mapStage{
-      position:fixed;
-      inset:0;
-      background:
-        radial-gradient(1200px 800px at 20% 20%, rgba(0,0,0,.35), transparent 62%),
-        radial-gradient(900px 700px at 80% 55%, rgba(0,0,0,.25), transparent 60%),
-        url("assets/map.png");
-      background-size: cover;
-      background-position:center;
-      filter: saturate(1.05) contrast(1.05);
-      pointer-events:none;
-    }
-
-    .stars{
-      position:fixed;
-      inset:0;
-      pointer-events:none;
-      background-image:
-        radial-gradient(1px 1px at 12% 22%, rgba(255,255,255,.60) 50%, transparent 51%),
-        radial-gradient(1px 1px at 67% 18%, rgba(255,255,255,.50) 50%, transparent 51%),
-        radial-gradient(1px 1px at 32% 78%, rgba(255,255,255,.40) 50%, transparent 51%),
-        radial-gradient(1px 1px at 85% 63%, rgba(255,255,255,.45) 50%, transparent 51%),
-        radial-gradient(1px 1px at 45% 40%, rgba(255,255,255,.30) 50%, transparent 51%),
-        radial-gradient(1px 1px at 8% 88%, rgba(255,255,255,.25) 50%, transparent 51%),
-        radial-gradient(1px 1px at 92% 90%, rgba(255,255,255,.30) 50%, transparent 51%);
-      opacity:.85;
-      animation: drift 18s linear infinite;
-      filter: drop-shadow(0 0 10px rgba(255,255,255,.10));
-    }
-    @keyframes drift{
-      from{ transform: translateY(0); }
-      to{ transform: translateY(18px); }
-    }
-
-    /* Watermark logo */
-    .logo{
-      position:fixed;
-      right:18px;
-      bottom:18px;
-      width: 300px;
-      height: 80px;
-      opacity:.16;
-      pointer-events:none;
-      filter: drop-shadow(0 10px 24px rgba(0,0,0,.55));
-      background: url("assets/cbonds.png");
-      background-size: contain;
-      background-repeat:no-repeat;
-      background-position:right bottom;
-    }
-
-    /* Fullscreen SVG map (clickable) */
+    /* Fullscreen SVG container */
     #mapSvg{
       position:fixed;
       inset:0;
       width:100%;
       height:100%;
       display:block;
-      pointer-events:auto; /* important */
+      pointer-events:auto;
+      touch-action:none; /* important for pan/zoom on touch */
     }
-
-    .clickable{ cursor:pointer; }
-    .noSelect{ user-select:none; -webkit-user-select:none; }
 
     /* HUD */
     .hudTop{
@@ -116,6 +57,7 @@
       justify-content:space-between;
       gap:14px;
       pointer-events:none;
+      z-index: 20;
     }
 
     .brand, .stats{
@@ -128,7 +70,7 @@
     }
 
     .brand{
-      max-width: 560px;
+      max-width: 620px;
       padding:14px 16px;
     }
     .brand h1{
@@ -168,7 +110,7 @@
     .fill.progress{ background: linear-gradient(90deg, rgba(124,255,124,.85), rgba(76,201,240,.75)); }
     .fill.stress{ background: linear-gradient(90deg, rgba(255,77,109,.85), rgba(255,209,102,.55)); }
 
-    /* Modal (quiz) */
+    /* Modal */
     .modalBack{
       position:fixed;
       inset:0;
@@ -181,7 +123,7 @@
       z-index: 50;
     }
     .modal{
-      width: min(720px, 100%);
+      width: min(760px, 100%);
       border:1px solid var(--stroke);
       background: var(--panel2);
       border-radius:16px;
@@ -267,30 +209,25 @@
       flex-wrap:wrap;
     }
 
-    /* small screens */
     @media (max-width: 780px){
       .hudTop{ flex-direction:column; align-items:stretch; }
       .stats{ min-width: unset; }
-      .logo{ width: 220px; height: 64px; opacity:.14; }
     }
   </style>
 </head>
 
 <body>
-  <div class="mapStage" aria-hidden="true"></div>
-  <div class="stars" aria-hidden="true"></div>
-
-  <!-- FULLSCREEN MAP SVG -->
-  <svg id="mapSvg" viewBox="0 0 1200 700" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Карта секторов">
+  <!-- SVG (zoom/pan world inside) -->
+  <svg id="mapSvg" viewBox="0 0 1200 700" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Карта секторов">
     <defs>
-      <filter id="glowA" x="-50%" y="-50%" width="200%" height="200%">
+      <filter id="glowA" x="-60%" y="-60%" width="220%" height="220%">
         <feGaussianBlur stdDeviation="3" result="blur"/>
         <feMerge>
           <feMergeNode in="blur"/>
           <feMergeNode in="SourceGraphic"/>
         </feMerge>
       </filter>
-      <filter id="glowB" x="-50%" y="-50%" width="200%" height="200%">
+      <filter id="glowB" x="-80%" y="-80%" width="260%" height="260%">
         <feGaussianBlur stdDeviation="7" result="blur"/>
         <feMerge>
           <feMergeNode in="blur"/>
@@ -299,10 +236,7 @@
       </filter>
 
       <style>
-        .pulse {
-          animation: pulse 1.35s ease-in-out infinite;
-          transform-origin: center;
-        }
+        .pulse { animation: pulse 1.35s ease-in-out infinite; transform-origin: center; }
         @keyframes pulse{
           0%,100%{ opacity: .75; transform: scale(1); }
           50%{ opacity: 1; transform: scale(1.08); }
@@ -310,16 +244,31 @@
       </style>
     </defs>
 
-    <g id="beaconsLayer"></g>
-    <g id="shipLayer"></g>
-    <g id="exitLayer"></g>
+    <!-- WORLD: everything that should zoom/pan together -->
+    <g id="world">
+      <!-- Map image inside world (so it scales on zoom) -->
+      <image href="assets/map.png" x="0" y="0" width="1200" height="700" preserveAspectRatio="xMidYMid slice" opacity="0.92"></image>
+
+      <!-- Soft vignette -->
+      <rect x="0" y="0" width="1200" height="700" fill="rgba(0,0,0,.22)"></rect>
+
+      <!-- Cbonds watermark -->
+      <image href="assets/cbonds.png" x="760" y="590" width="420" height="90" opacity="0.18"></image>
+
+      <g id="beaconsLayer"></g>
+      <g id="shipLayer"></g>
+      <g id="exitLayer"></g>
+    </g>
+
+    <!-- SCREEN overlay (NOT zoomed): stars / UI-like stuff could go here if needed -->
   </svg>
 
   <!-- HUD -->
   <div class="hudTop" aria-hidden="false">
     <div class="brand">
       <h1>Cbonds: Полёт к центру Галактики</h1>
-      <p>Кликайте по доступным секторам. После перелёта откроется событие — выберите ответ, чтобы изменить прогресс и стресс.</p>
+      <p>1) Кликайте по подсвеченным секторам. 2) Корабль перелетит. 3) Откроется событие — выберите ответ. 4) Окно закроется, появятся новые доступные сектора.</p>
+      <p style="margin-top:6px;color:rgba(166,183,216,.9)">Управление картой: колесо — зум, зажатая ЛКМ/тач — панорама.</p>
     </div>
 
     <div class="stats">
@@ -330,8 +279,6 @@
       <div class="bar" style="margin-bottom:0;"><div class="fill stress" id="stressFill"></div></div>
     </div>
   </div>
-
-  <div class="logo" aria-hidden="true"></div>
 
   <!-- MODAL QUIZ -->
   <div class="modalBack" id="modalBack" role="dialog" aria-modal="true" aria-label="Событие">
@@ -372,17 +319,19 @@
     },
     stepsSinceRandom: 0,
     pendingReturn: null,
-    currentNode: "E1",   // where ship is
+
+    currentNode: "E1",
     visited: new Set(["E1"]),
-    available: new Set(["E1"]), // clickable beacons right now
-    // travel lock
+    available: new Set(["E1"]),
     isTraveling: false
   };
 
   // ============
-  // UI
+  // UI refs
   // ============
   const ui = {
+    svg: document.getElementById("mapSvg"),
+    world: document.getElementById("world"),
     beaconsLayer: document.getElementById("beaconsLayer"),
     shipLayer: document.getElementById("shipLayer"),
     exitLayer: document.getElementById("exitLayer"),
@@ -401,6 +350,9 @@
     qChoices: document.getElementById("qChoices"),
   };
 
+  // ============
+  // Helpers
+  // ============
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
   const rnd = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
   const chance = (p) => Math.random() < p;
@@ -418,16 +370,20 @@
     ui.tagDot.className = "dot" + (kind ? (" " + kind) : "");
   }
 
+  function applyDelta(dp=0, ds=0){
+    state.progress = clamp(state.progress + dp, 0, 100);
+    state.stress   = clamp(state.stress + ds, 0, 100);
+    updateBars();
+  }
+
   // ============
-  // CONTENT (твоя сюжетка)
+  // Content
   // ============
   const nodes = {
     E1: {
-      id:"E1",
-      sector:"Орбита Клиентов",
+      id:"E1", sector:"Орбита Клиентов",
       title:"Приём сигнала с планеты Клиентов",
-      text:
-`Капитан получает зашифрованный сигнал.
+      text:`Капитан получает зашифрованный сигнал.
 Клиенты требуют изменить курс. В эфире — шум: срочность, эмоции и расплывчатые обещания.`,
       choices:[
         { label:"Разобрать сигнал, собрать контекст и уточнить детали", dp:10, ds:5, next:"E2" },
@@ -435,27 +391,21 @@
         { label:"Отложить сигнал в архив Галактики", dp:-5, ds:-5, setFlag:{asteroid_possible:true}, next:"E2" }
       ]
     },
-
     E2: {
-      id:"E2",
-      sector:"Совет Межзвёздной Связи",
+      id:"E2", sector:"Совет Межзвёздной Связи",
       title:"Совет Межзвёздной Связи",
-      text:
-`Собрались Главнокомандующий, Основатель Вселенной и офицеры связи.
+      text:`Собрались Главнокомандующий, Основатель Вселенной и офицеры связи.
 Тебя слушают внимательно. У тебя один шанс задать тон миссии.`,
       choices:[
         { label:"Защитить ценность миссии цифрами и фактами", dp:15, ds:-5, next:"E3" },
         { label:"Давить авторитетом клиента без метрик", dp:10, ds:10, next:"E3" },
-        { label:"Публично спорить с Главнокомандующим", fatal:true, fatalReason:"Публичный спор с Главнокомандующим.\nПотеря доверия Совета.\nМиссия закрыта ещё до старта." }
+        { label:"Публично спорить с Главнокомандующим", fatal:true, fatalReason:"Публичный спор.\nПотеря доверия Совета.\nМиссия закрыта ещё до старта." }
       ]
     },
-
     E3: {
-      id:"E3",
-      sector:"Звёздная карта",
+      id:"E3", sector:"Звёздная карта",
       title:"Построение звёздной карты миссий",
-      text:
-`Перед тобой десятки маршрутов и запросов.
+      text:`Перед тобой десятки маршрутов и запросов.
 Каждый — потенциальная экспедиция. Но топлива и экипажей мало.`,
       choices:[
         { label:"Жёстко приоритизировать по срочности и ценности", dp:15, ds:-5, next:"E4" },
@@ -463,42 +413,33 @@
         { label:"Передать приоритизацию командирам отсеков", dp:10, ds:10, next:"E4" }
       ]
     },
-
     E4: {
-      id:"E4",
-      sector:"Выбор корабля",
+      id:"E4", sector:"Выбор корабля",
       title:"Выбор типа корабля",
-      text:
-`Нужно определить маршрут:
-тяжёлый крейсер Корпуса Развития — дальний и сложный путь,
-или манёвренный шаттл IT-флота — быстрые локальные прыжки.`,
+      text:`Нужно определить маршрут:
+тяжёлый крейсер — дальний и сложный путь,
+или манёвренный шаттл — быстрые локальные прыжки.`,
       choices:[
-        { label:"Выбрать тяжёлый крейсер Корпуса Развития", dp:20, ds:10, next:"E5A" },
-        { label:"Выбрать манёвренный шаттл IT-флота", dp:15, ds:-5, next:"E5B" },
+        { label:"Выбрать тяжёлый крейсер", dp:20, ds:10, next:"E5A" },
+        { label:"Выбрать манёвренный шаттл", dp:15, ds:-5, next:"E5B" },
         { label:"Запустить оба маршрута параллельно", dp:10, ds:25, setFlag:{fuzzy_requirements:true}, next:"E7" }
       ]
     },
-
     E5A: {
-      id:"E5A",
-      sector:"Корпус Развития",
+      id:"E5A", sector:"Корпус Развития",
       title:"Совет Корпуса Развития",
-      text:
-`Верховный Архитектор и инженеры смотрят на тебя без эмоций.
+      text:`Инженеры смотрят на тебя без эмоций.
 Им нужны ясность, риски и гарантия, что корабль не развалится на старте.`,
       choices:[
         { label:"Принести подробный план, архитектуру и риски", dp:15, ds:-5, next:"E6A" },
-        { label:"Прийти с идеей без проработки: 'разберёмся по пути'", dp:-10, ds:15, setFlag:{fuzzy_requirements:true}, next:"E6A" },
-        { label:"Публично обвинить инженеров в торможении", fatal:true, fatalReason:"Публичные обвинения инженеров.\nТебя 'отстыковали' от ангара.\nКорабль не собран. Миссия сорвана." }
+        { label:"Прийти с идеей без проработки", dp:-10, ds:15, setFlag:{fuzzy_requirements:true}, next:"E6A" },
+        { label:"Публично обвинить инженеров в торможении", fatal:true, fatalReason:"Конфликт.\nТебя отстыковали от ангара.\nМиссия сорвана." }
       ]
     },
-
     E6A: {
-      id:"E6A",
-      sector:"Ангар",
+      id:"E6A", sector:"Ангар",
       title:"Ожидание сборки корабля",
-      text:
-`Ангар перегружен. Инженеры заняты спасением всей Галактики.
+      text:`Ангар перегружен.
 Можно ждать, можно давить, можно попытаться обойти очередь.`,
       choices:[
         { label:"Терпеливо ждать, улучшая подготовку миссии", dp:10, ds:-5, next:"E7" },
@@ -508,32 +449,25 @@
           prob: {
             p: 0.5,
             success: { dp:20, ds:0, next:"E7" },
-            fail: { fatal:true, fatalReason:"Попытка обойти очередь провалилась.\nПолитический скандал в ангаре.\nМиссия аннулирована." }
+            fail: { fatal:true, fatalReason:"Скандал в ангаре.\nМиссия аннулирована." }
           }
         }
       ]
     },
-
     E5B: {
-      id:"E5B",
-      sector:"Совет Флота",
+      id:"E5B", sector:"Совет Флота",
       title:"Прямой выход на Совет Флота",
-      text:
-`Ты напрямую на Совете Флота.
-Главнокомандующий, Верховный Архитектор и Адмирал Технологий ждут защиты маршрута.`,
+      text:`Командование ждёт защиты маршрута.`,
       choices:[
-        { label:"Коротко и по делу: цель, метрика, план, риски", dp:15, ds:-5, next:"E6B" },
+        { label:"Коротко и по делу: цель, план, риски", dp:15, ds:-5, next:"E6B" },
         { label:"Давить сроками: 'нужно вчера'", dp:10, ds:15, next:"E6B" },
-        { label:"Вынести внутренние конфликты на Совет", fatal:true, fatalReason:"Ты принёс внутреннюю войну на Совет Флота.\nКомандование отправляет миссию 'в карантин'.\nЗапуск отменён." }
+        { label:"Вынести внутренние конфликты публично", fatal:true, fatalReason:"Конфликт.\nЗапуск отменён." }
       ]
     },
-
     E6B: {
-      id:"E6B",
-      sector:"Подготовка шаттла",
-      title:"Быстрый запуск шаттла",
-      text:
-`Шаттл готов к старту, но всё держится на точности формулировок.
+      id:"E6B", sector:"Подготовка шаттла",
+      title:"Быстрый запуск",
+      text:`Всё держится на точности формулировок.
 Одно туманное слово — и траектория станет бесконечной.`,
       choices:[
         { label:"Чётко ограничить объём и критерии готовности", dp:15, ds:-5, next:"E7" },
@@ -541,242 +475,131 @@
         { label:"Расширить объём 'на всякий случай'", dp:5, ds:20, setFlag:{fuzzy_requirements:true}, next:"E7" }
       ]
     },
-
     E7: {
-      id:"E7",
-      sector:"Разбор траектории",
-      title:"Разбор маршрута полёта",
-      text:
-`Собрались адмиралы, ведущие навигаторы и старшие инженеры.
-Если маршрут описан туманно — миссию вернут на повторную калибровку.`,
+      id:"E7", sector:"Разбор траектории",
+      title:"Разбор маршрута",
+      text:`Если маршрут описан туманно — миссию вернут на повторную калибровку.`,
       choices:[
-        { label:"Уточнить и откалибровать маршрут до ясности", dp:15, ds:-5, setFlag:{fuzzy_requirements:false}, next:"E8" },
+        { label:"Откалибровать маршрут до ясности", dp:15, ds:-5, setFlag:{fuzzy_requirements:false}, next:"E8" },
         { label:"Оставить туман: 'главное — направление'", dp:-5, ds:15, setFlag:{fuzzy_requirements:true}, next:"E8" },
         { label:"Сказать: 'разберётесь по ходу'", dp:-10, ds:20, setFlag:{fuzzy_requirements:true}, next:"E8" }
       ]
     },
-
     E8: {
-      id:"E8",
-      sector:"Оценка сложности",
+      id:"E8", sector:"Оценка сложности",
       title:"Расчёт ресурсов и времени",
-      text:
-`Миссия получает оценку сложности и попадает в очередь запуска.
-Мало ресурсов — быстрый прыжок. Много ресурсов — экспедиция на годы.`,
+      text:`Миссия попадает в очередь запуска.`,
       choices:[
         { label:"Честно оценить сложность и предложить этапность", dp:15, ds:-5, next:"E9" },
         { label:"Занижать оценки, чтобы пробиться в очередь", dp:20, ds:15, addStressLater:true, next:"E9" },
-        { label:"Пролезть вне очереди через давление и связи", fatal:true, fatalReason:"Попытка пролезть вне очереди.\nАдмирал фиксирует нарушение.\nМиссия закрыта приказом." }
+        { label:"Пролезть вне очереди через давление", fatal:true, fatalReason:"Нарушение правил.\nМиссия закрыта." }
       ]
     },
-
     E9: {
-      id:"E9",
-      sector:"Большой Совет",
+      id:"E9", sector:"Большой Совет",
       title:"Большой Совет",
-      text:
-`Раз в две недели собирается Большой Совет.
-Идут эпические сражения за каждый слот запуска.`,
+      text:`Идут сражения за каждый слот запуска.`,
       choices:[
         { label:"Договориться с союзниками и зафиксировать слот", dp:20, ds:5, next:"E10" },
         { label:"Пойти в одиночный штурм Совета", dp:15, ds:15, next:"E10" },
         { label:"Устроить публичный конфликт за слот", dp:0, ds:40, next:"E10" }
       ]
     },
-
     E10: {
-      id:"E10",
-      sector:"Окно коррекции",
+      id:"E10", sector:"Окно коррекции",
       title:"Корректировка траектории",
-      text:
-`После Совета — короткое окно, чтобы менять маршрут.
-Каждая правка может спасти миссию… или сорвать старт.`,
+      text:`Есть короткое окно, чтобы менять маршрут.`,
       choices:[
-        { label:"Внести минимальные правки без срыва старта", dp:10, ds:-5, next:"E11" },
-        { label:"Существенно изменить маршрут (scope creep)", dp:10, ds:20, setFlag:{fuzzy_requirements:true}, next:"E11" },
+        { label:"Минимальные правки без срыва старта", dp:10, ds:-5, next:"E11" },
+        { label:"Существенно изменить маршрут", dp:10, ds:20, setFlag:{fuzzy_requirements:true}, next:"E11" },
         { label:"Отменить изменения вопреки данным", dp:-10, ds:20, next:"E11" }
       ]
     },
-
     E11: {
-      id:"E11",
-      sector:"Финальный прыжок",
+      id:"E11", sector:"Финал",
       title:"Прыжок к центру Галактики",
-      text:
-`Центр Галактики рядом.
-Системы гудят на пределе. Любая ошибка — и корабль разорвёт на орбите стресса.
-
-Выбери: прыгать сейчас или калибровать ещё один цикл.`,
+      text:`Центр Галактики рядом.
+Системы гудят на пределе.`,
       choices: [] // dynamic
     }
   };
 
   const randomEvents = {
-    R1: {
-      id:"R1",
-      sector:"Сигнал",
-      title:"Астероидный сигнал клиента",
-      text:
-`Экстренный сигнал прорывается в эфир.
-Крупный клиент требует немедленного манёвра — иначе ударит по орбите.`,
+    R1: { id:"R1", sector:"Сигнал", title:"Экстренный сигнал клиента",
+      text:`Экстренный сигнал прорывается в эфир.`,
       choices:[
         { label:"Взять срочно на себя", dp:10, ds:15 },
-        { label:"Делегировать офицерам связи с чёткими рамками", dp:5, ds:0 },
-        { label:"Игнорировать — 'не по плану'", fatal:true, fatalReason:"Ты игнорировал экстренный сигнал.\nКлиент сносит часть миссий с орбиты.\nЗапуск не состоится." }
+        { label:"Делегировать с чёткими рамками", dp:5, ds:0 },
+        { label:"Игнорировать", fatal:true, fatalReason:"Игнорирование сигнала.\nМиссия закрыта." }
       ]
     },
-    R2: {
-      id:"R2",
-      sector:"Требования",
-      title:"Контрабандисты требований",
-      text:
-`На стыковке появляется 'маленькая просьба': всего одна фича.
-Но у неё тень — ещё десять требований в грузовом отсеке.`,
+    R2: { id:"R2", sector:"Требования", title:"Контрабандисты требований",
+      text:`Появляется "маленькая просьба", но за ней хвост.`,
       choices:[
-        { label:"Отказать аргументированно и зафиксировать границы", dp:0, ds:-5 },
-        { label:"Согласиться, но ограничить объём письменно", dp:5, ds:10 },
-        { label:"Согласиться без фиксации — 'потом разберёмся'", dp:10, ds:15, setFlag:{fuzzy_requirements:true} }
+        { label:"Отказать и зафиксировать границы", dp:0, ds:-5 },
+        { label:"Согласиться и ограничить объём письменно", dp:5, ds:10 },
+        { label:"Согласиться без фиксации", dp:10, ds:15, setFlag:{fuzzy_requirements:true} }
       ]
     },
-    R3: {
-      id:"R3",
-      sector:"Данные",
-      title:"Туманность аналитики",
-      text:
-`Данные противоречат друг другу.
-Каждая метрика показывает другую Вселенную. Решение всё равно нужно сейчас.`,
+    R4: { id:"R4", sector:"Команды", title:"Конфликт команд",
+      text:`Команды спорят за приоритет.`,
       choices:[
-        { label:"Перепроверить источники и синхронизировать трактовку", dp:10, ds:0 },
-        { label:"Выбрать 'удобные' цифры ради решения", dp:10, ds:10, setFlag:{audit_risk:true} },
-        { label:"Отложить решение до идеальных данных", dp:-5, ds:5 }
-      ]
-    },
-    R4: {
-      id:"R4",
-      sector:"Команды",
-      title:"Конфликт командиров отсеков",
-      text:
-`Командиры спорят: чей отсек важнее.
-Конфликт разогревает стресс быстрее, чем реактор — топливо.`,
-      choices:[
-        { label:"Созвать мини-совет и развести ответственность", dp:5, ds:5 },
+        { label:"Развести ответственность", dp:5, ds:5 },
         { label:"Продавить решением роли", dp:5, ds:15 },
-        {
-          label:"Сделать вид, что проблемы нет",
-          prob: {
-            p: 0.25,
-            success: { dp:0, ds:10, next:null },
-            fail: { fatal:true, fatalReason:"Ты игнорировал конфликт.\nОтсек навигации саботирует подготовку.\nМиссия разваливается перед стартом." }
-          }
-        }
+        { label:"Игнорировать", prob:{ p:0.25, success:{dp:0,ds:10}, fail:{fatal:true,fatalReason:"Игнорирование конфликта.\nСрыв миссии."}}}
       ]
     },
-    R5: {
-      id:"R5",
-      sector:"Ресурсы",
-      title:"Потеря ключевого инженера",
-      text:
-`Ключевой инженер уходит на другую миссию.
-Нужно либо перестроить план, либо сломать людей.`,
-      choices:[
-        { label:"Перестроить план и сократить объём", dp:5, ds:10 },
-        { label:"Давить сроками и переработками", dp:10, ds:20 },
-        { label:"Заморозить часть миссии ради стабильности", dp:-5, ds:-5 }
-      ]
-    },
-    R6: {
-      id:"R6",
-      sector:"Союз",
-      title:"Неожиданный союзник",
-      text:
-`Офицер из соседнего сектора предлагает помощь: ресурсы и канал к Совету.
-Но за помощь всегда платят политикой.`,
-      choices:[
-        { label:"Принять помощь и зафиксировать договорённости", dp:10, ds:5 },
-        { label:"Отказаться: держать независимость", dp:0, ds:0 },
-        { label:"Перегрузить союзника и требовать больше", dp:10, ds:10 }
-      ]
-    },
-    R7: {
-      id:"R7",
-      sector:"Навигация",
-      title:"Поломка навигации",
-      text:
-`Навигационные датчики дают дрейф.
-Можно починить тщательно или поставить быстрый костыль.`,
+    R7: { id:"R7", sector:"Навигация", title:"Поломка навигации",
+      text:`Датчики дают дрейф.`,
       choices:[
         { label:"Починить тщательно и убрать риск", dp:5, ds:-5 },
-        { label:"Сделать быстрый костыль и лететь дальше", dp:10, ds:10 }
+        { label:"Сделать быстрый костыль", dp:10, ds:10 }
       ]
     },
-    R8: {
-      id:"R8",
-      sector:"Аудит",
-      title:"Внешний аудит траектории",
-      text:
-`Пришёл запрос на аудит: соответствие маршрута правилам и обещаниям.
-Если ты где-то 'занижал' сложность — это всплывёт.`,
+    R8: { id:"R8", sector:"Аудит", title:"Внешний аудит",
+      text:`Пришёл запрос на аудит.`,
       choices:[
-        { label:"Подготовиться и честно показать статус", dp:10, ds:5, setFlag:{audit_risk:false} },
-        {
-          label:"Импровизировать и надеяться на удачу",
-          prob: {
-            p: 0.2,
-            success: { dp:10, ds:0, next:null },
-            fail: { fatal:true, fatalReason:"Аудит вскрыл расхождения.\nСовет заморозил миссию до исправлений.\nКорабль не летит." }
-          }
-        },
-        {
-          label:"Скрыть детали и уйти от вопросов",
-          prob: {
-            p: 0.15,
-            success: { dp:0, ds:20, next:null },
-            fail: { fatal:true, fatalReason:"Попытка скрыть детали аудита.\nДоверие к капитану потеряно.\nМиссия закрыта." }
-          }
-        }
+        { label:"Честно показать статус", dp:10, ds:5, setFlag:{audit_risk:false} },
+        { label:"Импровизировать", prob:{ p:0.2, success:{dp:10,ds:0}, fail:{fatal:true,fatalReason:"Аудит вскрыл расхождения.\nМиссия закрыта."}}}
       ]
     }
   };
 
-  // ============
-  // MAP GEOMETRY (только точки)
-  // ============
-  // Внутренние ID не показываем на карте.
-  // Раскладка — "грид колонок", но без линий, только маяки.
-  const NODE_POS = {
-    E1:  {x: 140, y: 360},
-    E2:  {x: 260, y: 250},
-    E3:  {x: 360, y: 460},
-    E4:  {x: 480, y: 320},
-    E5A: {x: 560, y: 220},
-    E6A: {x: 640, y: 430},
-    E5B: {x: 580, y: 490},
-    E6B: {x: 700, y: 300},
-    E7:  {x: 760, y: 360},
-    E8:  {x: 880, y: 240},
-    E9:  {x: 930, y: 470},
-    E10: {x: 1050,y: 340},
-    E11: {x: 1120,y: 300},
+  function getNodeById(id){ return nodes[id] || randomEvents[id] || null; }
 
-    // Random events (раскиданы вокруг средней/правой зоны)
-    R1:  {x: 520, y: 170},
-    R2:  {x: 690, y: 540},
-    R3:  {x: 860, y: 360},
-    R4:  {x: 760, y: 200},
-    R5:  {x: 920, y: 560},
-    R6:  {x: 620, y: 150},
-    R7:  {x: 980, y: 230},
-    R8:  {x: 1010,y: 530},
+  // ============
+  // Map layout
+  // ============
+  const NODE_POS = {
+    E1:  {x: 160, y: 350},
+    E2:  {x: 280, y: 240},
+    E3:  {x: 380, y: 470},
+    E4:  {x: 520, y: 320},
+    E5A: {x: 610, y: 230},
+    E6A: {x: 690, y: 450},
+    E5B: {x: 640, y: 500},
+    E6B: {x: 760, y: 300},
+    E7:  {x: 820, y: 360},
+    E8:  {x: 930, y: 240},
+    E9:  {x: 980, y: 470},
+    E10: {x: 1080,y: 340},
+    E11: {x: 1140,y: 300},
+
+    // Random
+    R1:  {x: 560, y: 170},
+    R2:  {x: 760, y: 560},
+    R4:  {x: 820, y: 200},
+    R7:  {x: 1010,y: 230},
+    R8:  {x: 1040,y: 540},
   };
 
-  // Exit marker always far right (progress 100)
   const EXIT_POS = {x: 1180, y: 300};
 
   // ============
   // SVG helpers
   // ============
   const SVG_NS = "http://www.w3.org/2000/svg";
-  const el = (name, attrs = {}, text = null) => {
+  const el = (name, attrs={}, text=null) => {
     const n = document.createElementNS(SVG_NS, name);
     for (const [k,v] of Object.entries(attrs)) n.setAttribute(k, String(v));
     if (text != null) n.textContent = text;
@@ -806,14 +629,82 @@
   }
 
   // ============
-  // GAME FLOW
+  // Zoom/Pan
   // ============
-  function applyDelta(dp=0, ds=0){
-    state.progress = clamp(state.progress + dp, 0, 100);
-    state.stress   = clamp(state.stress + ds, 0, 100);
-    updateBars();
+  const view = {
+    scale: 1,
+    tx: 0,
+    ty: 0,
+    minScale: 0.85,
+    maxScale: 2.4,
+    dragging: false,
+    dragStart: {x:0,y:0, tx:0, ty:0},
+  };
+
+  function applyWorldTransform(){
+    ui.world.setAttribute("transform", `translate(${view.tx} ${view.ty}) scale(${view.scale})`);
   }
 
+  function clientToSvgPoint(clientX, clientY){
+    const pt = ui.svg.createSVGPoint();
+    pt.x = clientX;
+    pt.y = clientY;
+    const ctm = ui.svg.getScreenCTM();
+    if (!ctm) return {x:0,y:0};
+    const inv = ctm.inverse();
+    const sp = pt.matrixTransform(inv);
+    // compensate current world transform to get world coords:
+    return {
+      x: (sp.x - view.tx) / view.scale,
+      y: (sp.y - view.ty) / view.scale
+    };
+  }
+
+  ui.svg.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    const delta = -e.deltaY;
+    const zoom = delta > 0 ? 1.08 : 0.92;
+
+    const before = clientToSvgPoint(e.clientX, e.clientY);
+
+    const nextScale = clamp(view.scale * zoom, view.minScale, view.maxScale);
+    view.scale = nextScale;
+
+    // keep point under cursor stable:
+    const after = clientToSvgPoint(e.clientX, e.clientY);
+    view.tx += (after.x - before.x) * view.scale;
+    view.ty += (after.y - before.y) * view.scale;
+
+    applyWorldTransform();
+  }, { passive:false });
+
+  ui.svg.addEventListener("pointerdown", (e) => {
+    // do not start drag on clickable beacon (they stopPropagation)
+    view.dragging = true;
+    view.dragStart.x = e.clientX;
+    view.dragStart.y = e.clientY;
+    view.dragStart.tx = view.tx;
+    view.dragStart.ty = view.ty;
+    ui.svg.setPointerCapture(e.pointerId);
+  });
+
+  ui.svg.addEventListener("pointermove", (e) => {
+    if (!view.dragging) return;
+    const dx = e.clientX - view.dragStart.x;
+    const dy = e.clientY - view.dragStart.y;
+    view.tx = view.dragStart.tx + dx;
+    view.ty = view.dragStart.ty + dy;
+    applyWorldTransform();
+  });
+
+  ui.svg.addEventListener("pointerup", (e) => {
+    view.dragging = false;
+    try{ ui.svg.releasePointerCapture(e.pointerId); }catch(_){}
+  });
+
+  // ============
+  // Flow end checks
+  // ============
   function endIfNeeded(){
     if (state.stress >= 100){
       openQuiz({
@@ -851,249 +742,8 @@
     return pool[rnd(0, pool.length - 1)];
   }
 
-  function resolveNext(next){
-    if (typeof next === "function") return next(state);
-    return next;
-  }
-
-  // После прохождения квиза на текущем секторе — вычисляем доступные сектора:
-  // это уникальные next-id из вариантов ответа (с учётом вероятностей).
-  function computeNextIdsFromNode(node){
-    if (!node) return [];
-
-    // Финальный узел: выборы динамические
-    if (node.id === "E11"){
-      return ["E11_JUMP", "E11_CALIBRATE"]; // виртуальные “сектора-решения” (на карте не показываем отдельно)
-    }
-
-    const ids = new Set();
-    for (const c of (node.choices || [])){
-      if (c.prob){
-        if (c.prob.success && c.prob.success.next) ids.add(resolveNext(c.prob.success.next));
-        if (c.prob.fail && c.prob.fail.next) ids.add(resolveNext(c.prob.fail.next));
-      } else if (c.next){
-        ids.add(resolveNext(c.next));
-      } else {
-        // random event choices often have no explicit next -> will return to pendingReturn
-        // we do nothing here
-      }
-    }
-    return [...ids].filter(Boolean);
-  }
-
-  function setAvailable(ids){
-    state.available = new Set(ids);
-    // всегда разрешаем клик по текущему сектору, чтобы открыть квиз
-    state.available.add(state.currentNode);
-    renderMap();
-  }
-
   // ============
-  // TRAVEL + QUIZ
-  // ============
-  function travelTo(nodeId){
-    if (state.isTraveling) return;
-    if (!state.available.has(nodeId)) return;
-
-    // перелёт
-    state.isTraveling = true;
-
-    const from = NODE_POS[state.currentNode] || NODE_POS["E1"];
-    const to   = (nodeId === "EXIT") ? EXIT_POS : (NODE_POS[nodeId] || from);
-
-    animateShip(from, to, 520, () => {
-      state.isTraveling = false;
-      state.currentNode = nodeId;
-      state.visited.add(nodeId);
-
-      // открыть квиз по прилёту
-      const node = getNodeById(nodeId);
-      if (!node){
-        // если нет (теоретически) — просто обновить карту
-        renderMap();
-        return;
-      }
-      openNodeQuiz(node);
-    });
-  }
-
-  function getNodeById(id){
-    if (nodes[id]) return nodes[id];
-    if (randomEvents[id]) return randomEvents[id];
-    return null;
-  }
-
-  function openNodeQuiz(node){
-    // динамика финального узла
-    if (node.id === "E11"){
-      const kind = (state.progress >= 85 && state.stress < 80) ? "good" : (state.stress >= 80 ? "bad" : "warn");
-      setTag(kind, node.sector);
-
-      const c1 = {
-        label:"Синхронизировать системы и выполнить прыжок",
-        _action: () => {
-          closeQuiz();
-          applyDelta(10, 10);
-          if (endIfNeeded()) return;
-
-          // принудительное событие R7
-          state.pendingReturn = "E11";
-          queueNextForced("R7");
-        }
-      };
-      const c2 = {
-        label:"Сделать финальную калибровку перед прыжком",
-        _action: () => {
-          closeQuiz();
-          applyDelta(5, -5);
-          if (endIfNeeded()) return;
-
-          state.pendingReturn = "E11";
-          let pick = Object.keys(randomEvents)[rnd(0, Object.keys(randomEvents).length - 1)];
-          if (state.flags.audit_risk && chance(0.5)) pick = "R8";
-          queueNextForced(pick);
-        }
-      };
-
-      openQuiz({
-        sector: node.sector,
-        title: node.title,
-        text: node.text,
-        choices: [c1, c2]
-      }, { kind });
-      return;
-    }
-
-    const isRandom = node.id.startsWith("R");
-    const kind = isRandom ? "warn" : "";
-    setTag(kind, node.sector);
-
-    // Собираем обработчики выбора
-    const preparedChoices = (node.choices || []).map(c => {
-      return {
-        label: c.label,
-        _action: () => {
-          closeQuiz();
-
-          // fatal
-          if (c.fatal){
-            applyDelta(0, 100);
-            openQuiz({
-              sector:"Финал",
-              title:"Системы отказали",
-              text: c.fatalReason || "Катастрофа.",
-              choices:[{ label:"Начать новый цикл", _action: () => resetGame() }]
-            }, { kind:"bad" });
-            return;
-          }
-
-          // flags
-          if (c.setFlag){
-            for (const [k,v] of Object.entries(c.setFlag)) state.flags[k] = v;
-          }
-
-          // probability
-          if (c.prob){
-            if (chance(c.prob.p)){
-              const s = c.prob.success;
-              if (s.setFlag) for (const [k,v] of Object.entries(s.setFlag)) state.flags[k] = v;
-              if (s.fatal){
-                applyDelta(0, 100);
-                openQuiz({
-                  sector:"Финал",
-                  title:"Системы отказали",
-                  text: s.fatalReason || "Катастрофа.",
-                  choices:[{ label:"Начать новый цикл", _action: () => resetGame() }]
-                }, { kind:"bad" });
-                return;
-              }
-              applyDelta(s.dp || 0, s.ds || 0);
-              if (endIfNeeded()) return;
-
-              const next = resolveNext(s.next);
-              if (next) queueNext(next);
-              else queueAfterRandomReturn();
-              return;
-            } else {
-              const f = c.prob.fail;
-              if (f.setFlag) for (const [k,v] of Object.entries(f.setFlag)) state.flags[k] = v;
-              if (f.fatal){
-                applyDelta(0, 100);
-                openQuiz({
-                  sector:"Финал",
-                  title:"Системы отказали",
-                  text: f.fatalReason || "Катастрофа.",
-                  choices:[{ label:"Начать новый цикл", _action: () => resetGame() }]
-                }, { kind:"bad" });
-                return;
-              }
-              applyDelta(f.dp || 0, f.ds || 0);
-              if (endIfNeeded()) return;
-
-              const next = resolveNext(f.next);
-              if (next) queueNext(next);
-              else queueAfterRandomReturn();
-              return;
-            }
-          }
-
-          // plain delta
-          applyDelta(c.dp || 0, c.ds || 0);
-          if (c.addStressLater) state.flags.audit_risk = true;
-
-          if (endIfNeeded()) return;
-
-          // next
-          const next = resolveNext(c.next);
-          if (next){
-            queueNext(next);
-          } else {
-            // random events often return to pendingReturn
-            queueAfterRandomReturn();
-          }
-        }
-      };
-    });
-
-    openQuiz({
-      sector: node.sector,
-      title: node.title,
-      text: node.text,
-      choices: preparedChoices
-    }, { kind });
-  }
-
-  function queueAfterRandomReturn(){
-    // если это было случайное событие без явного next
-    const pending = state.pendingReturn;
-    state.pendingReturn = null;
-    if (pending) queueNext(pending);
-    else setAvailable([state.currentNode]); // fallback
-  }
-
-  function queueNext(nextId){
-    // Вставка случайного события между узлами (как раньше), но теперь через “доступные сектора”
-    const injected = maybeInsertRandom(nextId);
-
-    // если вставилось событие, делаем доступным только его (чтобы пользователь кликнул и “перелетел”)
-    if (injected !== nextId){
-      // подготовим доступность: только случайное событие
-      // но на карте оно выглядит как обычный доступный маяк
-      setAvailable([injected]);
-      return;
-    }
-
-    // обычный переход: доступен один следующий сектор (как в твоей сюжетке линейно)
-    setAvailable([nextId]);
-  }
-
-  function queueNextForced(id){
-    // принудительный “следующий сектор” без дополнительной вставки
-    setAvailable([id]);
-  }
-
-  // ============
-  // MODAL
+  // Modal
   // ============
   function openQuiz(payload, { kind="" } = {}){
     setTag(kind, payload.sector || "Сектор");
@@ -1104,125 +754,40 @@
     for (const c of (payload.choices || [])){
       const btn = document.createElement("button");
       btn.textContent = c.label;
-      btn.addEventListener("click", () => {
-        if (c._action) c._action();
-      });
+      btn.addEventListener("click", () => c._action && c._action());
       ui.qChoices.appendChild(btn);
     }
-
     ui.modalBack.style.display = "flex";
   }
-
   function closeQuiz(){
     ui.modalBack.style.display = "none";
   }
 
-  // close modal on backdrop click (optional)
-  ui.modalBack.addEventListener("click", (e) => {
-    if (e.target === ui.modalBack) {
-      // не закрываем, чтобы не ломать flow — пользователь должен выбрать
-    }
-  });
-
   // ============
-  // RENDER MAP (только точки)
+  // Availability logic
   // ============
-  function renderMap(){
-    clear(ui.beaconsLayer);
-    clear(ui.shipLayer);
-    clear(ui.exitLayer);
-
-    // draw exit
-    const exitG = diamond(EXIT_POS.x, EXIT_POS.y, "rgba(124,255,124,.95)", 14, "glowB");
-    ui.exitLayer.appendChild(exitG);
-    ui.exitLayer.appendChild(el("text",{
-      x: EXIT_POS.x - 44, y: EXIT_POS.y - 20,
-      fill:"rgba(231,240,255,.80)",
-      "font-size":"12",
-      "font-family":"ui-monospace, Menlo, Consolas, monospace"
-    }, "100"));
-
-    // beacons: show all story nodes + possible random nodes
-    const allIds = Object.keys(NODE_POS);
-
-    for (const id of allIds){
-      const p = NODE_POS[id];
-      const isVisited = state.visited.has(id);
-      const isAvailable = state.available.has(id);
-      const isCurrent = (state.currentNode === id);
-
-      // style
-      let color = "rgba(220,235,255,.22)";
-      let size = 6;
-
-      if (isVisited) { color = "rgba(220,235,255,.35)"; size = 7; }
-      if (isAvailable) { color = "rgba(76,201,240,.95)"; size = 10; }
-      if (isCurrent) { color = "rgba(76,201,240,.95)"; size = 9; }
-
-      // “тип” событий (не обязательно, но приятно)
-      // random events подсветим чуть иначе (желтоватый оттенок), но только если доступны/посещены
-      const node = getNodeById(id);
-      const isRandom = node && node.id && node.id.startsWith("R");
-      if (isRandom && isAvailable) color = "rgba(255,209,102,.95)";
-
-      const g = diamond(p.x, p.y, color, size, isAvailable ? "glowB" : "glowA");
-
-      // кликабельность только для доступных
-      if (isAvailable && !state.isTraveling){
-        g.classList.add("clickable","noSelect");
-        g.classList.add("pulse");
-        g.setAttribute("tabindex","0");
-        g.setAttribute("role","button");
-        g.setAttribute("aria-label","Перелететь в сектор");
-        g.appendChild(el("title", {}, "Перелететь"));
-
-        g.addEventListener("click", (e) => {
-          e.stopPropagation();
-          travelTo(id);
-        });
-        g.addEventListener("keydown", (e) => {
-          if (e.key === "Enter") travelTo(id);
-        });
-      } else {
-        // не ловить клики
-        g.style.pointerEvents = "none";
-      }
-
-      ui.beaconsLayer.appendChild(g);
-
-      // если текущий сектор — лёгкое кольцо вокруг
-      if (isCurrent){
-        ui.beaconsLayer.appendChild(circle(p.x, p.y, 14, "rgba(76,201,240,.08)", "rgba(76,201,240,.35)", 2, "glowA"));
-      }
-    }
-
-    drawShip();
+  function setAvailable(ids){
+    state.available = new Set(ids);
+    state.available.add(state.currentNode); // открыть событие на текущем секторе всегда можно
+    renderMap();
   }
 
-  function drawShip(){
-    // ракета стоит на текущем секторе
-    const p = NODE_POS[state.currentNode] || NODE_POS["E1"];
-    const g = el("g", { transform:`translate(${p.x} ${p.y})`, filter:"url(#glowB)" });
-
-    g.appendChild(circle(0,0, 11, "rgba(76,201,240,.18)", "rgba(76,201,240,.70)", 2, null));
-    g.appendChild(el("path",{
-      d:"M -2 -8 L 12 0 L -2 8 Z",
-      fill:"rgba(76,201,240,.95)",
-      stroke:"rgba(0,0,0,.35)",
-      "stroke-width":"1"
-    }));
-    g.appendChild(el("text",{
-      x:16, y:-10,
-      fill:"rgba(231,240,255,.85)",
-      "font-size":"12",
-      "font-family":"ui-monospace, Menlo, Consolas, monospace"
-    }, `${state.progress}%`));
-
-    ui.shipLayer.appendChild(g);
+  function queueNext(nextId){
+    const injected = maybeInsertRandom(nextId);
+    setAvailable([injected]);
   }
 
+  function queueAfterRandomReturn(){
+    const pending = state.pendingReturn;
+    state.pendingReturn = null;
+    if (pending) queueNext(pending);
+    else setAvailable([state.currentNode]);
+  }
+
+  // ============
+  // Travel animation
+  // ============
   function animateShip(from, to, ms, done){
-    // простая анимация без внешних libs
     const start = performance.now();
     const ease = (t) => (t<0.5 ? 2*t*t : 1 - Math.pow(-2*t+2,2)/2);
 
@@ -1233,27 +798,263 @@
       const y = from.y + (to.y - from.y) * k;
 
       clear(ui.shipLayer);
-      const g = el("g", { transform:`translate(${x} ${y})`, filter:"url(#glowB)" });
-      g.appendChild(circle(0,0, 11, "rgba(76,201,240,.18)", "rgba(76,201,240,.70)", 2));
-      g.appendChild(el("path",{
-        d:"M -2 -8 L 12 0 L -2 8 Z",
-        fill:"rgba(76,201,240,.95)",
-        stroke:"rgba(0,0,0,.35)",
-        "stroke-width":"1"
-      }));
-      ui.shipLayer.appendChild(g);
+      ui.shipLayer.appendChild(makeShipAt(x,y,false));
 
       if (t < 1) requestAnimationFrame(frame);
-      else {
-        renderMap();
-        done();
-      }
+      else done();
     }
     requestAnimationFrame(frame);
   }
 
   // ============
-  // RESET
+  // Render
+  // ============
+  function makeShipAt(x,y, withLabel=true){
+    const g = el("g", { transform:`translate(${x} ${y})`, filter:"url(#glowB)" });
+    g.appendChild(circle(0,0, 11, "rgba(76,201,240,.18)", "rgba(76,201,240,.75)", 2));
+    g.appendChild(el("path",{
+      d:"M -2 -8 L 12 0 L -2 8 Z",
+      fill:"rgba(76,201,240,.95)",
+      stroke:"rgba(0,0,0,.35)",
+      "stroke-width":"1"
+    }));
+    if (withLabel){
+      g.appendChild(el("text",{
+        x:16, y:-10,
+        fill:"rgba(231,240,255,.85)",
+        "font-size":"12",
+        "font-family":"ui-monospace, Menlo, Consolas, monospace"
+      }, `${state.progress}%`));
+    }
+    return g;
+  }
+
+  function renderMap(){
+    clear(ui.beaconsLayer);
+    clear(ui.shipLayer);
+    clear(ui.exitLayer);
+
+    // Exit marker (always visible)
+    const exitG = diamond(EXIT_POS.x, EXIT_POS.y, "rgba(124,255,124,.95)", 14, "glowB");
+    ui.exitLayer.appendChild(exitG);
+    ui.exitLayer.appendChild(el("text",{
+      x: EXIT_POS.x - 44, y: EXIT_POS.y - 20,
+      fill:"rgba(231,240,255,.80)",
+      "font-size":"12",
+      "font-family":"ui-monospace, Menlo, Consolas, monospace"
+    }, "100"));
+
+    const allIds = Object.keys(NODE_POS);
+
+    for (const id of allIds){
+      const p = NODE_POS[id];
+      const isVisited = state.visited.has(id);
+      const isAvailable = state.available.has(id);
+      const isCurrent = state.currentNode === id;
+
+      const node = getNodeById(id);
+      const isRandom = !!(node && node.id && node.id.startsWith("R"));
+
+      let color = "rgba(220,235,255,.22)";
+      let size = 7;
+      let glow = "glowA";
+
+      if (isVisited){ color = "rgba(220,235,255,.32)"; size = 8; }
+      if (isAvailable){ color = "rgba(76,201,240,.95)"; size = 12; glow = "glowB"; }
+      if (isRandom && isAvailable){ color = "rgba(255,209,102,.95)"; }
+      if (isCurrent){ color = "rgba(76,201,240,.95)"; size = 10; glow = "glowB"; }
+
+      // Visible diamond
+      const beacon = diamond(p.x, p.y, color, size, glow);
+      ui.beaconsLayer.appendChild(beacon);
+
+      // Ring on current
+      if (isCurrent){
+        ui.beaconsLayer.appendChild(circle(p.x, p.y, 16, "rgba(76,201,240,.07)", "rgba(76,201,240,.35)", 2, "glowA"));
+      }
+
+      // HIT ZONE (this is the key fix for “not clickable”)
+      // Always create it, but enable pointer-events only for available beacons.
+      const hit = circle(p.x, p.y, 22, "rgba(0,0,0,0)", "rgba(0,0,0,0)", 1, null);
+      hit.setAttribute("data-id", id);
+
+      if (isAvailable && !state.isTraveling){
+        hit.style.pointerEvents = "all";
+        beacon.classList.add("pulse");
+        hit.style.cursor = "pointer";
+
+        // stop drag-start when clicking a beacon
+        const onClick = (e) => {
+          e.stopPropagation();
+          travelTo(id);
+        };
+        hit.addEventListener("pointerdown", (e)=> e.stopPropagation());
+        hit.addEventListener("click", onClick);
+
+        // Keyboard support (focusable)
+        hit.setAttribute("tabindex","0");
+        hit.setAttribute("role","button");
+        hit.setAttribute("aria-label","Перелететь в сектор");
+        hit.addEventListener("keydown", (e)=>{ if(e.key==="Enter") travelTo(id); });
+
+      } else {
+        hit.style.pointerEvents = "none";
+      }
+
+      ui.beaconsLayer.appendChild(hit);
+    }
+
+    // ship
+    const shipPos = NODE_POS[state.currentNode] || NODE_POS["E1"];
+    ui.shipLayer.appendChild(makeShipAt(shipPos.x, shipPos.y, true));
+  }
+
+  // ============
+  // Travel + quiz
+  // ============
+  function travelTo(nodeId){
+    if (state.isTraveling) return;
+    if (!state.available.has(nodeId)) return;
+
+    const from = NODE_POS[state.currentNode] || NODE_POS["E1"];
+    const to = NODE_POS[nodeId] || from;
+
+    state.isTraveling = true;
+    renderMap(); // disable other clicks instantly
+
+    animateShip(from, to, 520, () => {
+      state.isTraveling = false;
+      state.currentNode = nodeId;
+      state.visited.add(nodeId);
+      renderMap();
+      openNodeQuiz(getNodeById(nodeId));
+    });
+  }
+
+  function openNodeQuiz(node){
+    if (!node) return;
+
+    // Dynamic финальный узел
+    if (node.id === "E11"){
+      const kind = (state.progress >= 85 && state.stress < 80) ? "good" : (state.stress >= 80 ? "bad" : "warn");
+      openQuiz({
+        sector: node.sector,
+        title: node.title,
+        text: node.text + "\n\nВыбери действие:",
+        choices: [
+          {
+            label:"Синхронизировать системы и выполнить прыжок",
+            _action: () => {
+              closeQuiz();
+              applyDelta(10, 10);
+              if (endIfNeeded()) return;
+              state.pendingReturn = "E11";
+              setAvailable(["R7"]);
+            }
+          },
+          {
+            label:"Сделать финальную калибровку",
+            _action: () => {
+              closeQuiz();
+              applyDelta(5, -5);
+              if (endIfNeeded()) return;
+              state.pendingReturn = "E11";
+              const pick = state.flags.audit_risk && chance(0.5) ? "R8" : (["R1","R2","R4","R7"][rnd(0,3)]);
+              setAvailable([pick]);
+            }
+          }
+        ]
+      }, { kind });
+      return;
+    }
+
+    const isRandom = node.id.startsWith("R");
+    const kind = isRandom ? "warn" : "";
+
+    const prepared = (node.choices || []).map(c => ({
+      label: c.label,
+      _action: () => {
+        closeQuiz();
+
+        // Fatal
+        if (c.fatal){
+          state.stress = 100;
+          updateBars();
+          openQuiz({
+            sector:"Финал",
+            title:"Системы отказали",
+            text: c.fatalReason || "Катастрофа.",
+            choices:[{ label:"Начать новый цикл", _action: () => resetGame() }]
+          }, { kind:"bad" });
+          return;
+        }
+
+        // Flags
+        if (c.setFlag) for (const [k,v] of Object.entries(c.setFlag)) state.flags[k] = v;
+
+        // Prob
+        if (c.prob){
+          if (chance(c.prob.p)){
+            const s = c.prob.success;
+            if (s.setFlag) for (const [k,v] of Object.entries(s.setFlag)) state.flags[k] = v;
+            if (s.fatal){
+              state.stress = 100;
+              updateBars();
+              openQuiz({
+                sector:"Финал",
+                title:"Системы отказали",
+                text: s.fatalReason || "Катастрофа.",
+                choices:[{ label:"Начать новый цикл", _action: () => resetGame() }]
+              }, { kind:"bad" });
+              return;
+            }
+            applyDelta(s.dp||0, s.ds||0);
+            if (endIfNeeded()) return;
+            if (s.next) queueNext(s.next); else queueAfterRandomReturn();
+            return;
+          } else {
+            const f = c.prob.fail;
+            if (f.setFlag) for (const [k,v] of Object.entries(f.setFlag)) state.flags[k] = v;
+            if (f.fatal){
+              state.stress = 100;
+              updateBars();
+              openQuiz({
+                sector:"Финал",
+                title:"Системы отказали",
+                text: f.fatalReason || "Катастрофа.",
+                choices:[{ label:"Начать новый цикл", _action: () => resetGame() }]
+              }, { kind:"bad" });
+              return;
+            }
+            applyDelta(f.dp||0, f.ds||0);
+            if (endIfNeeded()) return;
+            if (f.next) queueNext(f.next); else queueAfterRandomReturn();
+            return;
+          }
+        }
+
+        // Plain deltas
+        applyDelta(c.dp||0, c.ds||0);
+        if (c.addStressLater) state.flags.audit_risk = true;
+
+        if (endIfNeeded()) return;
+
+        // Next / return
+        if (c.next) queueNext(c.next);
+        else queueAfterRandomReturn();
+      }
+    }));
+
+    openQuiz({
+      sector: node.sector,
+      title: node.title,
+      text: node.text,
+      choices: prepared
+    }, { kind });
+  }
+
+  // ============
+  // Reset
   // ============
   function resetGame(){
     state.progress = 0;
@@ -1267,21 +1068,25 @@
     state.available = new Set(["E1"]);
     state.isTraveling = false;
 
-    updateBars();
+    // reset view
+    view.scale = 1;
+    view.tx = 0;
+    view.ty = 0;
+    applyWorldTransform();
+
     closeQuiz();
+    updateBars();
     renderMap();
   }
 
   // ============
-  // BOOT
+  // Boot
   // ============
   updateBars();
+  applyWorldTransform();
   renderMap();
 
-  // Старт: игрок кликает по E1 (доступен) -> прилет -> открывается квиз
-  // (Можно и автозапуском, но ты просил “пользователь кликает на сектор”.)
-
-  // Когда квиз E1 пройден — откроется следующий сектор (через setAvailable).
+  // Стартовый UX: игрок кликает по E1 (подсвечен) -> перелёт -> квиз.
 
 })();
 </script>
