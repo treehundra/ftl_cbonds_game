@@ -43,7 +43,7 @@
       height:100%;
       display:block;
       pointer-events:auto;
-      touch-action:none; /* important for pan/zoom on touch */
+      touch-action:none;
     }
 
     /* HUD */
@@ -70,7 +70,7 @@
     }
 
     .brand{
-      max-width: 620px;
+      max-width: 680px;
       padding:14px 16px;
     }
     .brand h1{
@@ -217,7 +217,6 @@
 </head>
 
 <body>
-  <!-- SVG (zoom/pan world inside) -->
   <svg id="mapSvg" viewBox="0 0 1200 700" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Карта секторов">
     <defs>
       <filter id="glowA" x="-60%" y="-60%" width="220%" height="220%">
@@ -244,31 +243,28 @@
       </style>
     </defs>
 
-    <!-- WORLD: everything that should zoom/pan together -->
     <g id="world">
-      <!-- Map image inside world (so it scales on zoom) -->
-      <image href="assets/map.png" x="0" y="0" width="1200" height="700" preserveAspectRatio="xMidYMid slice" opacity="0.92"></image>
+      <!-- IMPORTANT: no slashes in filenames -->
+      <image id="bgImg" href="map.png" x="0" y="0" width="1200" height="700"
+             preserveAspectRatio="xMidYMid slice" opacity="0.92" pointer-events="none"></image>
 
-      <!-- Soft vignette -->
-      <rect x="0" y="0" width="1200" height="700" fill="rgba(0,0,0,.22)"></rect>
+      <rect x="0" y="0" width="1200" height="700" fill="rgba(0,0,0,.22)" pointer-events="none"></rect>
 
-      <!-- Cbonds watermark -->
-      <image href="assets/cbonds.png" x="760" y="590" width="420" height="90" opacity="0.18"></image>
+      <!-- Cbonds watermark (no slashes) -->
+      <image id="logoImg" href="cbonds.png" x="760" y="590" width="420" height="90"
+             opacity="0.18" pointer-events="none"></image>
 
       <g id="beaconsLayer"></g>
       <g id="shipLayer"></g>
       <g id="exitLayer"></g>
     </g>
-
-    <!-- SCREEN overlay (NOT zoomed): stars / UI-like stuff could go here if needed -->
   </svg>
 
-  <!-- HUD -->
-  <div class="hudTop" aria-hidden="false">
+  <div class="hudTop">
     <div class="brand">
       <h1>Cbonds: Полёт к центру Галактики</h1>
-      <p>1) Кликайте по подсвеченным секторам. 2) Корабль перелетит. 3) Откроется событие — выберите ответ. 4) Окно закроется, появятся новые доступные сектора.</p>
-      <p style="margin-top:6px;color:rgba(166,183,216,.9)">Управление картой: колесо — зум, зажатая ЛКМ/тач — панорама.</p>
+      <p>Кликайте по подсвеченным секторам: корабль перелетит → откроется событие → вы выбираете ответ → меняются прогресс и стресс → появляются новые доступные сектора.</p>
+      <p style="margin-top:6px;color:rgba(166,183,216,.9)">Управление картой: колесо/трекпад — зум, зажатая ЛКМ/тач — панорама.</p>
     </div>
 
     <div class="stats">
@@ -280,7 +276,6 @@
     </div>
   </div>
 
-  <!-- MODAL QUIZ -->
   <div class="modalBack" id="modalBack" role="dialog" aria-modal="true" aria-label="Событие">
     <div class="modal">
       <div class="modalTop">
@@ -305,9 +300,9 @@
 
 <script>
 (() => {
-  // ============
+  // =====================
   // STATE
-  // ============
+  // =====================
   const state = {
     progress: 0,
     stress: 20,
@@ -326,12 +321,11 @@
     isTraveling: false
   };
 
-  // ============
+  // =====================
   // UI refs
-  // ============
+  // =====================
   const ui = {
     svg: document.getElementById("mapSvg"),
-    world: document.getElementById("world"),
     beaconsLayer: document.getElementById("beaconsLayer"),
     shipLayer: document.getElementById("shipLayer"),
     exitLayer: document.getElementById("exitLayer"),
@@ -350,9 +344,9 @@
     qChoices: document.getElementById("qChoices"),
   };
 
-  // ============
+  // =====================
   // Helpers
-  // ============
+  // =====================
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
   const rnd = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
   const chance = (p) => Math.random() < p;
@@ -376,9 +370,9 @@
     updateBars();
   }
 
-  // ============
-  // Content
-  // ============
+  // =====================
+  // Content (оставил как было — твои тексты)
+  // =====================
   const nodes = {
     E1: {
       id:"E1", sector:"Орбита Клиентов",
@@ -520,7 +514,7 @@
       title:"Прыжок к центру Галактики",
       text:`Центр Галактики рядом.
 Системы гудят на пределе.`,
-      choices: [] // dynamic
+      choices: []
     }
   };
 
@@ -567,9 +561,9 @@
 
   function getNodeById(id){ return nodes[id] || randomEvents[id] || null; }
 
-  // ============
+  // =====================
   // Map layout
-  // ============
+  // =====================
   const NODE_POS = {
     E1:  {x: 160, y: 350},
     E2:  {x: 280, y: 240},
@@ -585,19 +579,17 @@
     E10: {x: 1080,y: 340},
     E11: {x: 1140,y: 300},
 
-    // Random
     R1:  {x: 560, y: 170},
     R2:  {x: 760, y: 560},
     R4:  {x: 820, y: 200},
     R7:  {x: 1010,y: 230},
     R8:  {x: 1040,y: 540},
   };
-
   const EXIT_POS = {x: 1180, y: 300};
 
-  // ============
+  // =====================
   // SVG helpers
-  // ============
+  // =====================
   const SVG_NS = "http://www.w3.org/2000/svg";
   const el = (name, attrs={}, text=null) => {
     const n = document.createElementNS(SVG_NS, name);
@@ -608,7 +600,7 @@
   const clear = (node) => { while(node.firstChild) node.removeChild(node.firstChild); };
 
   function diamond(x,y, color, size=10, glow="glowA"){
-    const g = el("g", { transform:`translate(${x} ${y})`, filter:`url(#${glow})` });
+    const g = el("g", { transform:`translate(${x} ${y})`, filter:`url(#${glow})`, "pointer-events":"none" });
     g.appendChild(el("path", {
       d: `M 0 ${-size} L ${size} 0 L 0 ${size} L ${-size} 0 Z`,
       fill: color,
@@ -621,90 +613,85 @@
   function circle(x,y, r, fill, stroke, sw=1, glow=null){
     return el("circle", {
       cx:x, cy:y, r,
-      fill,
-      stroke,
+      fill, stroke,
       "stroke-width": String(sw),
       filter: glow ? `url(#${glow})` : "none"
     });
   }
 
-  // ============
-  // Zoom/Pan
-  // ============
-  const view = {
-    scale: 1,
-    tx: 0,
-    ty: 0,
-    minScale: 0.85,
-    maxScale: 2.4,
-    dragging: false,
-    dragStart: {x:0,y:0, tx:0, ty:0},
-  };
+  // =====================
+  // Zoom/Pan via viewBox (stable)
+  // =====================
+  const vb = { x:0, y:0, w:1200, h:700 };
+  const vbMinW = 420;   // max zoom-in
+  const vbMaxW = 1600;  // max zoom-out
+  let dragging = false;
+  let dragStart = { cx:0, cy:0, x:0, y:0 };
 
-  function applyWorldTransform(){
-    ui.world.setAttribute("transform", `translate(${view.tx} ${view.ty}) scale(${view.scale})`);
+  function applyViewBox(){
+    ui.svg.setAttribute("viewBox", `${vb.x} ${vb.y} ${vb.w} ${vb.h}`);
   }
 
-  function clientToSvgPoint(clientX, clientY){
+  function clientToSvg(clientX, clientY){
     const pt = ui.svg.createSVGPoint();
-    pt.x = clientX;
-    pt.y = clientY;
+    pt.x = clientX; pt.y = clientY;
     const ctm = ui.svg.getScreenCTM();
     if (!ctm) return {x:0,y:0};
-    const inv = ctm.inverse();
-    const sp = pt.matrixTransform(inv);
-    // compensate current world transform to get world coords:
-    return {
-      x: (sp.x - view.tx) / view.scale,
-      y: (sp.y - view.ty) / view.scale
-    };
+    return pt.matrixTransform(ctm.inverse());
   }
 
   ui.svg.addEventListener("wheel", (e) => {
     e.preventDefault();
-    const delta = -e.deltaY;
-    const zoom = delta > 0 ? 1.08 : 0.92;
+    const zoomFactor = (e.deltaY < 0) ? 0.92 : 1.08; // trackpad-friendly
 
-    const before = clientToSvgPoint(e.clientX, e.clientY);
+    const p = clientToSvg(e.clientX, e.clientY);
 
-    const nextScale = clamp(view.scale * zoom, view.minScale, view.maxScale);
-    view.scale = nextScale;
+    const nextW = clamp(vb.w * zoomFactor, vbMinW, vbMaxW);
+    const nextH = nextW * (700/1200);
 
-    // keep point under cursor stable:
-    const after = clientToSvgPoint(e.clientX, e.clientY);
-    view.tx += (after.x - before.x) * view.scale;
-    view.ty += (after.y - before.y) * view.scale;
+    // keep point under cursor
+    const kx = (p.x - vb.x) / vb.w;
+    const ky = (p.y - vb.y) / vb.h;
 
-    applyWorldTransform();
+    vb.x = p.x - kx * nextW;
+    vb.y = p.y - ky * nextH;
+    vb.w = nextW;
+    vb.h = nextH;
+
+    applyViewBox();
   }, { passive:false });
 
   ui.svg.addEventListener("pointerdown", (e) => {
-    // do not start drag on clickable beacon (they stopPropagation)
-    view.dragging = true;
-    view.dragStart.x = e.clientX;
-    view.dragStart.y = e.clientY;
-    view.dragStart.tx = view.tx;
-    view.dragStart.ty = view.ty;
+    dragging = true;
+    dragStart.cx = e.clientX;
+    dragStart.cy = e.clientY;
+    dragStart.x = vb.x;
+    dragStart.y = vb.y;
     ui.svg.setPointerCapture(e.pointerId);
   });
 
   ui.svg.addEventListener("pointermove", (e) => {
-    if (!view.dragging) return;
-    const dx = e.clientX - view.dragStart.x;
-    const dy = e.clientY - view.dragStart.y;
-    view.tx = view.dragStart.tx + dx;
-    view.ty = view.dragStart.ty + dy;
-    applyWorldTransform();
+    if (!dragging) return;
+    const dx = e.clientX - dragStart.cx;
+    const dy = e.clientY - dragStart.cy;
+
+    // convert screen delta to svg delta
+    const scaleX = vb.w / ui.svg.clientWidth;
+    const scaleY = vb.h / ui.svg.clientHeight;
+
+    vb.x = dragStart.x - dx * scaleX;
+    vb.y = dragStart.y - dy * scaleY;
+    applyViewBox();
   });
 
   ui.svg.addEventListener("pointerup", (e) => {
-    view.dragging = false;
+    dragging = false;
     try{ ui.svg.releasePointerCapture(e.pointerId); }catch(_){}
   });
 
-  // ============
-  // Flow end checks
-  // ============
+  // =====================
+  // End checks
+  // =====================
   function endIfNeeded(){
     if (state.stress >= 100){
       openQuiz({
@@ -742,15 +729,15 @@
     return pool[rnd(0, pool.length - 1)];
   }
 
-  // ============
+  // =====================
   // Modal
-  // ============
+  // =====================
   function openQuiz(payload, { kind="" } = {}){
     setTag(kind, payload.sector || "Сектор");
     ui.qTitle.textContent = payload.title || "";
     ui.qText.textContent = payload.text || "";
-
     ui.qChoices.innerHTML = "";
+
     for (const c of (payload.choices || [])){
       const btn = document.createElement("button");
       btn.textContent = c.label;
@@ -759,24 +746,20 @@
     }
     ui.modalBack.style.display = "flex";
   }
-  function closeQuiz(){
-    ui.modalBack.style.display = "none";
-  }
+  function closeQuiz(){ ui.modalBack.style.display = "none"; }
 
-  // ============
+  // =====================
   // Availability logic
-  // ============
+  // =====================
   function setAvailable(ids){
     state.available = new Set(ids);
-    state.available.add(state.currentNode); // открыть событие на текущем секторе всегда можно
+    state.available.add(state.currentNode);
     renderMap();
   }
-
   function queueNext(nextId){
     const injected = maybeInsertRandom(nextId);
     setAvailable([injected]);
   }
-
   function queueAfterRandomReturn(){
     const pending = state.pendingReturn;
     state.pendingReturn = null;
@@ -784,9 +767,9 @@
     else setAvailable([state.currentNode]);
   }
 
-  // ============
+  // =====================
   // Travel animation
-  // ============
+  // =====================
   function animateShip(from, to, ms, done){
     const start = performance.now();
     const ease = (t) => (t<0.5 ? 2*t*t : 1 - Math.pow(-2*t+2,2)/2);
@@ -806,11 +789,11 @@
     requestAnimationFrame(frame);
   }
 
-  // ============
+  // =====================
   // Render
-  // ============
-  function makeShipAt(x,y, withLabel=true){
-    const g = el("g", { transform:`translate(${x} ${y})`, filter:"url(#glowB)" });
+  // =====================
+  function makeShipAt(x,y, withLabel=false){
+    const g = el("g", { transform:`translate(${x} ${y})`, filter:"url(#glowB)", "pointer-events":"none" });
     g.appendChild(circle(0,0, 11, "rgba(76,201,240,.18)", "rgba(76,201,240,.75)", 2));
     g.appendChild(el("path",{
       d:"M -2 -8 L 12 0 L -2 8 Z",
@@ -834,14 +817,14 @@
     clear(ui.shipLayer);
     clear(ui.exitLayer);
 
-    // Exit marker (always visible)
-    const exitG = diamond(EXIT_POS.x, EXIT_POS.y, "rgba(124,255,124,.95)", 14, "glowB");
-    ui.exitLayer.appendChild(exitG);
+    // Exit marker
+    ui.exitLayer.appendChild(diamond(EXIT_POS.x, EXIT_POS.y, "rgba(124,255,124,.95)", 14, "glowB"));
     ui.exitLayer.appendChild(el("text",{
-      x: EXIT_POS.x - 44, y: EXIT_POS.y - 20,
+      x: EXIT_POS.x - 10, y: EXIT_POS.y - 20,
       fill:"rgba(231,240,255,.80)",
       "font-size":"12",
-      "font-family":"ui-monospace, Menlo, Consolas, monospace"
+      "font-family":"ui-monospace, Menlo, Consolas, monospace",
+      "pointer-events":"none"
     }, "100"));
 
     const allIds = Object.keys(NODE_POS);
@@ -864,54 +847,47 @@
       if (isRandom && isAvailable){ color = "rgba(255,209,102,.95)"; }
       if (isCurrent){ color = "rgba(76,201,240,.95)"; size = 10; glow = "glowB"; }
 
-      // Visible diamond
+      // Visual beacon (non-interactive)
       const beacon = diamond(p.x, p.y, color, size, glow);
+      if (isAvailable && !state.isTraveling) beacon.classList.add("pulse");
       ui.beaconsLayer.appendChild(beacon);
 
-      // Ring on current
+      // Current ring
       if (isCurrent){
         ui.beaconsLayer.appendChild(circle(p.x, p.y, 16, "rgba(76,201,240,.07)", "rgba(76,201,240,.35)", 2, "glowA"));
       }
 
-      // HIT ZONE (this is the key fix for “not clickable”)
-      // Always create it, but enable pointer-events only for available beacons.
-      const hit = circle(p.x, p.y, 22, "rgba(0,0,0,0)", "rgba(0,0,0,0)", 1, null);
+      // HIT ZONE (interactive)
+      const hit = circle(p.x, p.y, 24, "transparent", "transparent", 1, null);
       hit.setAttribute("data-id", id);
 
       if (isAvailable && !state.isTraveling){
-        hit.style.pointerEvents = "all";
-        beacon.classList.add("pulse");
+        hit.setAttribute("pointer-events", "all");
         hit.style.cursor = "pointer";
 
-        // stop drag-start when clicking a beacon
-        const onClick = (e) => {
-          e.stopPropagation();
-          travelTo(id);
-        };
+        const onClick = (e) => { e.stopPropagation(); travelTo(id); };
         hit.addEventListener("pointerdown", (e)=> e.stopPropagation());
         hit.addEventListener("click", onClick);
 
-        // Keyboard support (focusable)
         hit.setAttribute("tabindex","0");
         hit.setAttribute("role","button");
         hit.setAttribute("aria-label","Перелететь в сектор");
         hit.addEventListener("keydown", (e)=>{ if(e.key==="Enter") travelTo(id); });
-
       } else {
-        hit.style.pointerEvents = "none";
+        hit.setAttribute("pointer-events", "none");
       }
 
       ui.beaconsLayer.appendChild(hit);
     }
 
-    // ship
+    // ship at current
     const shipPos = NODE_POS[state.currentNode] || NODE_POS["E1"];
-    ui.shipLayer.appendChild(makeShipAt(shipPos.x, shipPos.y, true));
+    ui.shipLayer.appendChild(makeShipAt(shipPos.x, shipPos.y, false));
   }
 
-  // ============
+  // =====================
   // Travel + quiz
-  // ============
+  // =====================
   function travelTo(nodeId){
     if (state.isTraveling) return;
     if (!state.available.has(nodeId)) return;
@@ -920,7 +896,7 @@
     const to = NODE_POS[nodeId] || from;
 
     state.isTraveling = true;
-    renderMap(); // disable other clicks instantly
+    renderMap();
 
     animateShip(from, to, 520, () => {
       state.isTraveling = false;
@@ -934,7 +910,6 @@
   function openNodeQuiz(node){
     if (!node) return;
 
-    // Dynamic финальный узел
     if (node.id === "E11"){
       const kind = (state.progress >= 85 && state.stress < 80) ? "good" : (state.stress >= 80 ? "bad" : "warn");
       openQuiz({
@@ -976,7 +951,6 @@
       _action: () => {
         closeQuiz();
 
-        // Fatal
         if (c.fatal){
           state.stress = 100;
           updateBars();
@@ -989,57 +963,38 @@
           return;
         }
 
-        // Flags
         if (c.setFlag) for (const [k,v] of Object.entries(c.setFlag)) state.flags[k] = v;
 
-        // Prob
         if (c.prob){
-          if (chance(c.prob.p)){
-            const s = c.prob.success;
-            if (s.setFlag) for (const [k,v] of Object.entries(s.setFlag)) state.flags[k] = v;
-            if (s.fatal){
-              state.stress = 100;
-              updateBars();
-              openQuiz({
-                sector:"Финал",
-                title:"Системы отказали",
-                text: s.fatalReason || "Катастрофа.",
-                choices:[{ label:"Начать новый цикл", _action: () => resetGame() }]
-              }, { kind:"bad" });
-              return;
-            }
-            applyDelta(s.dp||0, s.ds||0);
-            if (endIfNeeded()) return;
-            if (s.next) queueNext(s.next); else queueAfterRandomReturn();
-            return;
-          } else {
-            const f = c.prob.fail;
-            if (f.setFlag) for (const [k,v] of Object.entries(f.setFlag)) state.flags[k] = v;
-            if (f.fatal){
-              state.stress = 100;
-              updateBars();
-              openQuiz({
-                sector:"Финал",
-                title:"Системы отказали",
-                text: f.fatalReason || "Катастрофа.",
-                choices:[{ label:"Начать новый цикл", _action: () => resetGame() }]
-              }, { kind:"bad" });
-              return;
-            }
-            applyDelta(f.dp||0, f.ds||0);
-            if (endIfNeeded()) return;
-            if (f.next) queueNext(f.next); else queueAfterRandomReturn();
+          const branch = chance(c.prob.p) ? c.prob.success : c.prob.fail;
+
+          if (branch.setFlag) for (const [k,v] of Object.entries(branch.setFlag)) state.flags[k] = v;
+
+          if (branch.fatal){
+            state.stress = 100;
+            updateBars();
+            openQuiz({
+              sector:"Финал",
+              title:"Системы отказали",
+              text: branch.fatalReason || "Катастрофа.",
+              choices:[{ label:"Начать новый цикл", _action: () => resetGame() }]
+            }, { kind:"bad" });
             return;
           }
+
+          applyDelta(branch.dp||0, branch.ds||0);
+          if (endIfNeeded()) return;
+
+          if (branch.next) queueNext(branch.next);
+          else queueAfterRandomReturn();
+          return;
         }
 
-        // Plain deltas
         applyDelta(c.dp||0, c.ds||0);
         if (c.addStressLater) state.flags.audit_risk = true;
 
         if (endIfNeeded()) return;
 
-        // Next / return
         if (c.next) queueNext(c.next);
         else queueAfterRandomReturn();
       }
@@ -1053,9 +1008,9 @@
     }, { kind });
   }
 
-  // ============
+  // =====================
   // Reset
-  // ============
+  // =====================
   function resetGame(){
     state.progress = 0;
     state.stress = 20;
@@ -1068,26 +1023,21 @@
     state.available = new Set(["E1"]);
     state.isTraveling = false;
 
-    // reset view
-    view.scale = 1;
-    view.tx = 0;
-    view.ty = 0;
-    applyWorldTransform();
+    // reset viewbox
+    vb.x = 0; vb.y = 0; vb.w = 1200; vb.h = 700;
+    applyViewBox();
 
     closeQuiz();
     updateBars();
     renderMap();
   }
 
-  // ============
+  // =====================
   // Boot
-  // ============
+  // =====================
   updateBars();
-  applyWorldTransform();
+  applyViewBox();
   renderMap();
-
-  // Стартовый UX: игрок кликает по E1 (подсвечен) -> перелёт -> квиз.
-
 })();
 </script>
 </body>
